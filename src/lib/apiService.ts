@@ -9,7 +9,7 @@ export type CpuSnapshot = {
   usage: number;
 };
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = 'http://192.168.1.130:5000/api';
 
 function isDiskSnapshot(value: unknown): value is DiskSnapshot {
   if (!value || typeof value !== 'object') return false;
