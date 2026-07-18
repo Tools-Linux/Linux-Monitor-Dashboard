@@ -15,6 +15,7 @@ export type CpuSnapshot = {
   host: string;
   kernel: string;
   os: string;
+  tempCpu: number;
 };
 
 export type MemorySnapshot = {

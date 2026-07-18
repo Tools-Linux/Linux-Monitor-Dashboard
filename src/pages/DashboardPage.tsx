@@ -35,6 +35,7 @@ export function DashboardPage() {
   const [hostname, setHostname] = useState(live.sys.hostname);
   const [osname, setOsname] = useState(live.sys.os);
   const [kernel, setKernel] = useState(live.sys.kernel);
+  const [cpuTemp, setCpuTemp] = useState(live.sys.tempCpu);
   const [cpuHistory, setCpuHistory] = useState<number[]>(() => live.cpuHistory.slice(-48));
   const [cpuUpdatedAt, setCpuUpdatedAt] = useState<string | null>(null);
   const [fallbackDisk] = useState(() => {
@@ -77,6 +78,7 @@ export function DashboardPage() {
         setHostname(snapshot.host);
         setKernel(snapshot.kernel);
         setOsname(snapshot.os);
+        setCpuTemp(snapshot.tempCpu);
         setCpuHistory((prev) => [...prev.slice(1), snapshot.usage]);
         setCpuUpdatedAt(new Date().toLocaleTimeString());
       } catch {
@@ -90,6 +92,7 @@ export function DashboardPage() {
           setHostname(live.sys.hostname);
           setKernel(live.sys.kernel);
           setOsname(live.sys.os);
+          setCpuTemp(live.sys.tempCpu);
         }
       }
     };
@@ -249,8 +252,8 @@ export function DashboardPage() {
             <Sensor
               icon={<Thermometer size={16} />}
               label="Temp. CPU"
-              value={`${live.sys.tempCpu.toFixed(0)}°C`}
-              tone={live.sys.tempCpu > 70 ? 'text-err-400' : 'text-brand-300'}
+              value={`${cpuTemp.toFixed(0)}°C`}
+              tone={cpuTemp > 70 ? 'text-err-400' : 'text-brand-300'}
             />
             <Sensor icon={<Thermometer size={16} />} label="Temp. GPU" value={`${live.sys.tempGpu.toFixed(0)}°C`} tone="text-accent-400" />
             <Sensor icon={<Zap size={16} />} label="Consommation" value={`${live.sys.powerWatts.toFixed(0)} W`} tone="text-warn-400" />
