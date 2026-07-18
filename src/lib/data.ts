@@ -222,7 +222,9 @@ export function makeProcesses(): Process[] {
 }
 
 export function makeLog(): LogEntry {
-  const tpl = LOG_TEMPLATES[Math.floor(rand(0, LOG_TEMPLATES.length))];
+  const tpl =
+    LOG_TEMPLATES[Math.floor(rand(0, LOG_TEMPLATES.length))] ??
+    { level: 'info' as LogLevel, unit: 'system', message: 'No log templates configured' };
   const now = new Date();
   return {
     id: logCounter++,
