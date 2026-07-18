@@ -32,82 +32,42 @@ export function DashboardPage() {
     useState<string | null>(null);
 
 
-  useEffect(() => {
-    let mounted = true;
+useEffect(() => {
 
-    async function loadCpu() {
-      const controller = new AbortController();
+  console.log("CPU effect lancé");
 
-      try {
-        const snapshot = await getCpuSnapshot(
-          controller.signal
-        );
+  let mounted = true;
 
-        console.log("CPU API:", snapshot);
+  async function loadCpu() {
 
-        if (!mounted) return;
+    console.log("loadCpu appelé");
 
-        const value = Number(snapshot.usage);
+    try {
 
-        if (Number.isNaN(value)) {
-          throw new Error(
-            "Valeur CPU invalide"
-          );
-        }
+      const snapshot = await getCpuSnapshot();
 
+      console.log("CPU reçu :", snapshot);
 
-        setCpuPct(value);
+      if (!mounted) return;
 
+      setCpuPct(snapshot.usage);
 
-        setCpuHistory((previous) => {
-          const next = [
-            ...previous,
-            value
-          ];
+    } catch (e) {
 
-          return next.slice(-48);
-        });
+      console.error("Erreur CPU :", e);
 
-
-        setCpuUpdatedAt(
-          new Date().toLocaleTimeString()
-        );
-
-
-      } catch (error) {
-
-        if (
-          error instanceof DOMException &&
-          error.name === "AbortError"
-        ) {
-          return;
-        }
-
-        console.error(
-          "Erreur récupération CPU:",
-          error
-        );
-      }
     }
+  }
 
 
-    void loadCpu();
+  loadCpu();
 
 
-    const timer = window.setInterval(
-      () => {
-        void loadCpu();
-      },
-      5000
-    );
+  return () => {
+    mounted = false;
+  };
 
-
-    return () => {
-      mounted = false;
-      window.clearInterval(timer);
-    };
-
-  }, []);
+}, []);
 
 
   const memPct = pct(
