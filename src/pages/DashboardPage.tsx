@@ -95,7 +95,7 @@ export function DashboardPage() {
         <StatTile
           label="Charge CPU"
           value={`${cpuPct.toFixed(1)}%`}
-          sub={`${live.sys.cores} cœurs · ${live.sys.cpuModel.split(' ').slice(0, 4).join(' ')}`}
+          sub={`${cpuPct.toFixed(3)} cœurs · ${cpuPct.toFixed(3)}`}
           icon={<Cpu size={18} />}
           accent="bg-brand-500"
         />
