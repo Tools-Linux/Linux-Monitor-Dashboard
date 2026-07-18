@@ -9,6 +9,8 @@ export type CpuSnapshot = {
   usage: number;
   name: string;
   core: string;
+  arch: string;
+  processes: number;
 };
 
 export type MemorySnapshot = {

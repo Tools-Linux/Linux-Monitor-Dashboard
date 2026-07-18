@@ -72,6 +72,7 @@ export interface SystemInfo {
   load: [number, number, number];
   cpuModel: string;
   cores: number;
+  processes: number;
   cpuCores: CpuCore[];
   memTotalGB: number;
   memUsedGB: number;
@@ -85,7 +86,6 @@ export interface SystemInfo {
   tempCpu: number;
   tempGpu: number;
   powerWatts: number;
-  processes: number;
   threads: number;
 }
 

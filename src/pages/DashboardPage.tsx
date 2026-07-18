@@ -29,6 +29,8 @@ export function DashboardPage() {
   const [cpuPct, setCpuPct] = useState(fallbackCpuPct);
   const [cpuName, setCpuName] = useState(live.sys.cpuModel);
   const [cpuCore, setCpuCore] = useState(String(live.sys.cores));
+  const [cpuArch, setCpuArch] = useState(live.sys.arch);
+  const [cpuProcessorCount, setCpuProcessorCount] = useState(live.sys.processes);
   const [cpuHistory, setCpuHistory] = useState<number[]>(() => live.cpuHistory.slice(-48));
   const [cpuUpdatedAt, setCpuUpdatedAt] = useState<string | null>(null);
   const [fallbackDisk] = useState(() => {
@@ -65,6 +67,8 @@ export function DashboardPage() {
         setCpuPct(snapshot.usage);
         setCpuName(snapshot.name);
         setCpuCore(snapshot.core);
+        setCpuArch(snapshot.arch);
+        setCpuProcessorCount(snapshot.processes);
         setCpuHistory((prev) => [...prev.slice(1), snapshot.usage]);
         setCpuUpdatedAt(new Date().toLocaleTimeString());
       } catch {
@@ -72,6 +76,8 @@ export function DashboardPage() {
           setCpuPct(fallbackCpuPct);
           setCpuName(live.sys.cpuModel);
           setCpuCore(String(live.sys.cores));
+          setCpuArch(live.sys.arch);
+          setCpuProcessorCount(live.sys.processes);
         }
       }
     };
@@ -217,9 +223,9 @@ export function DashboardPage() {
             <Info label="Hôte" value={live.sys.hostname} />
             <Info label="OS" value={live.sys.os} />
             <Info label="Noyau" value={live.sys.kernel} mono />
-            <Info label="Architecture" value={live.sys.arch} mono />
+            <Info label="Architecture" value={cpuArch} mono />
             <Info label="Uptime" value={live.sys.uptime} />
-            <Info label="Processus" value={`${live.sys.processes} (${live.sys.threads} threads)`} />
+            <Info label="Processus" value={`${cpuProcessorCount} (${live.sys.threads} threads)`} />
             <Info label="CPU" value={cpuName} span={3} />
             <Info label="Core API" value={cpuCore} mono />
           </div>
