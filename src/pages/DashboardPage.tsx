@@ -32,6 +32,7 @@ export function DashboardPage() {
   const [cpuArch, setCpuArch] = useState(live.sys.arch);
   const [cpuProcessorCount, setCpuProcessorCount] = useState(live.sys.processes);
   const [cpuThreads, setCpuThreads] = useState(live.sys.threads);
+  const [hostname, setHostname] = useState(live.sys.hostname);
   const [cpuHistory, setCpuHistory] = useState<number[]>(() => live.cpuHistory.slice(-48));
   const [cpuUpdatedAt, setCpuUpdatedAt] = useState<string | null>(null);
   const [fallbackDisk] = useState(() => {
@@ -71,6 +72,7 @@ export function DashboardPage() {
         setCpuArch(snapshot.arch);
         setCpuThreads(snapshot.threads);
         setCpuProcessorCount(snapshot.processes);
+        setHostname(snapshot.host);
         setCpuHistory((prev) => [...prev.slice(1), snapshot.usage]);
         setCpuUpdatedAt(new Date().toLocaleTimeString());
       } catch {
@@ -81,6 +83,7 @@ export function DashboardPage() {
           setCpuArch(live.sys.arch);
           setCpuProcessorCount(live.sys.processes);
           setCpuThreads(live.sys.threads);
+          setHostname(live.sys.hostname);
         }
       }
     };
@@ -223,7 +226,7 @@ export function DashboardPage() {
         <div className="card card-pad lg:col-span-2">
           <h2 className="text-sm font-semibold text-white">Informations système</h2>
           <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
-            <Info label="Hôte" value={live.sys.hostname} />
+            <Info label="Hôte" value={hostname} />
             <Info label="OS" value={live.sys.os} />
             <Info label="Noyau" value={live.sys.kernel} mono />
             <Info label="Architecture" value={cpuArch} mono />

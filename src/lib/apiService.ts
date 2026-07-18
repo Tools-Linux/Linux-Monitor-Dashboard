@@ -12,6 +12,7 @@ export type CpuSnapshot = {
   arch: string;
   processes: number;
   threads: number;
+  host: string;
 };
 
 export type MemorySnapshot = {
