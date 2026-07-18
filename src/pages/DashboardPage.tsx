@@ -28,6 +28,7 @@ export function DashboardPage() {
   const [fallbackCpuPct] = useState(() => live.cpuHistory[live.cpuHistory.length - 1]);
   const [cpuPct, setCpuPct] = useState(fallbackCpuPct);
   const [cpuHistory, setCpuHistory] = useState<number[]>(() => live.cpuHistory);
+  const [cpuUpdatedAt, setCpuUpdatedAt] = useState<string | null>(null);
   const memPct = pct(live.sys.memUsedGB, live.sys.memTotalGB);
   const swapPct = pct(live.sys.swapUsedGB, live.sys.swapTotalGB);
   const totalDiskGB = live.disks.reduce((a, d) => a + d.sizeGB, 0);
@@ -46,6 +47,7 @@ export function DashboardPage() {
         if (mounted) setCpuPct(snapshot.usage);
         if (mounted) {
           setCpuHistory((prev) => [...prev.slice(1), snapshot.usage]);
+          setCpuUpdatedAt(new Date().toLocaleTimeString());
         }
       } catch {
         if (mounted) setCpuPct(fallbackCpuPct);
@@ -123,9 +125,10 @@ export function DashboardPage() {
             <div>
               <div className="mb-1 flex justify-between text-xs text-ink-300">
                 <span>CPU</span>
-                <span className="font-mono text-brand-300">{cpuPct.toFixed(1)}%</span>
+                <span className="font-mono text-brand-300">{cpuPct.toFixed(2)}%</span>
               </div>
               <Sparkline data={cpuHistory} color="#10b981" height={56} max={100} />
+              <p className="mt-1 text-[11px] text-ink-500">Dernière valeur API: {cpuUpdatedAt ?? 'en attente...'}</p>
             </div>
             <div>
               <div className="mb-1 flex justify-between text-xs text-ink-300">
