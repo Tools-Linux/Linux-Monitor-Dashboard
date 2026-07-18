@@ -9,6 +9,8 @@ import {
   Terminal,
   ShieldCheck,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { getCpuSnapshot } from '../lib/apiService';
 import type { Route } from '../lib/router';
 import { useLiveData } from '../lib/live';
 import { pct, usageTone } from '../lib/format';
@@ -30,10 +32,36 @@ const NAV: Array<{ id: Route; label: string; icon: React.ReactNode }> = [
 
 export function Sidebar({ route, navigate }: SidebarProps) {
   const live = useLiveData();
-  const cpuPct = live.cpuHistory[live.cpuHistory.length - 1];
+  const [fallbackCpuPct] = useState(() => live.cpuHistory[live.cpuHistory.length - 1]);
+  const [cpuPct, setCpuPct] = useState(fallbackCpuPct);
   const memPct = pct(live.sys.memUsedGB, live.sys.memTotalGB);
   const cpuTone = usageTone(cpuPct).bar;
   const memTone = usageTone(memPct).bar;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let mounted = true;
+
+    const loadCpu = async () => {
+      try {
+        const snapshot = await getCpuSnapshot(controller.signal);
+        if (mounted) setCpuPct(snapshot.usage);
+      } catch {
+        if (mounted) setCpuPct(fallbackCpuPct);
+      }
+    };
+
+    void loadCpu();
+    const refreshId = window.setInterval(() => {
+      void loadCpu();
+    }, 5000);
+
+    return () => {
+      mounted = false;
+      controller.abort();
+      window.clearInterval(refreshId);
+    };
+  }, []);
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-ink-700/60 bg-ink-900/50 p-4 md:flex">

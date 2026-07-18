@@ -8,6 +8,8 @@ import {
   Thermometer,
   Zap,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { getCpuSnapshot } from '../lib/apiService';
 import { useLiveData } from '../lib/live';
 import { fmtBytes, fmtMbps, pct, usageTone } from '../lib/format';
 import { Ring, Sparkline } from '../components/Charts';
@@ -23,7 +25,8 @@ const statusMeta: Record<ServiceStatus, { label: string; cls: string; dot: strin
 
 export function DashboardPage() {
   const live = useLiveData();
-  const cpuPct = live.cpuHistory[live.cpuHistory.length - 1];
+  const [fallbackCpuPct] = useState(() => live.cpuHistory[live.cpuHistory.length - 1]);
+  const [cpuPct, setCpuPct] = useState(0);
   const memPct = pct(live.sys.memUsedGB, live.sys.memTotalGB);
   const swapPct = pct(live.sys.swapUsedGB, live.sys.swapTotalGB);
   const totalDiskGB = live.disks.reduce((a, d) => a + d.sizeGB, 0);
@@ -31,6 +34,31 @@ export function DashboardPage() {
 
   const runningServices = live.services.filter((s) => s.status === 'running').length;
   const failedServices = live.services.filter((s) => s.status === 'failed').length;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let mounted = true;
+
+    const loadCpu = async () => {
+      try {
+        const snapshot = await getCpuSnapshot(controller.signal);
+        if (mounted) setCpuPct(snapshot.usage);
+      } catch {
+        if (mounted) setCpuPct(fallbackCpuPct);
+      }
+    };
+
+    void loadCpu();
+    const refreshId = window.setInterval(() => {
+      void loadCpu();
+    }, 5000);
+
+    return () => {
+      mounted = false;
+      controller.abort();
+      window.clearInterval(refreshId);
+    };
+  }, []);
 
   return (
     <div className="space-y-6">
