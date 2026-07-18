@@ -95,71 +95,15 @@ const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(mi
 
 let logCounter = 1;
 
-const SERVICE_DEFS: Array<Omit<Service, 'cpu' | 'memMB' | 'pid' | 'uptime'>> = [
-  { name: 'SSH Server', unit: 'sshd.service', status: 'running', enabled: true, description: 'OpenBSD secure shell server' },
-  { name: 'Nginx', unit: 'nginx.service', status: 'running', enabled: true, description: 'High-performance web server' },
-  { name: 'PostgreSQL', unit: 'postgresql.service', status: 'running', enabled: true, description: 'Object-relational SQL database' },
-  { name: 'Redis', unit: 'redis-server.service', status: 'running', enabled: true, description: 'In-memory data store' },
-  { name: 'Docker Engine', unit: 'docker.service', status: 'running', enabled: true, description: 'Container runtime daemon' },
-  { name: 'Cron', unit: 'cron.service', status: 'running', enabled: true, description: 'Periodic command scheduler' },
-  { name: 'systemd-resolved', unit: 'systemd-resolved.service', status: 'running', enabled: true, description: 'Network name resolution' },
-  { name: 'UFW Firewall', unit: 'ufw.service', status: 'running', enabled: true, description: 'Uncomplicated firewall' },
-  { name: 'Fail2ban', unit: 'fail2ban.service', status: 'running', enabled: true, description: 'Intrusion prevention framework' },
-  { name: 'Prometheus Node Exporter', unit: 'node_exporter.service', status: 'running', enabled: true, description: 'Metrics exporter' },
-  { name: 'Grafana', unit: 'grafana-server.service', status: 'degraded', enabled: true, description: 'Analytics & dashboards' },
-  { name: 'Mail Transport Agent', unit: 'postfix.service', status: 'stopped', enabled: false, description: 'SMTP mail transport' },
-  { name: 'Cups Printer', unit: 'cups.service', status: 'stopped', enabled: false, description: 'Print server' },
-  { name: 'Bluetooth Daemon', unit: 'bluetooth.service', status: 'failed', enabled: true, description: 'Bluetooth service' },
-];
+const SERVICE_DEFS: Array<Omit<Service, 'cpu' | 'memMB' | 'pid' | 'uptime'>> = [];
 
-const DISK_DEFS: Array<Omit<Disk, 'usedGB' | 'tempC' | 'readMBps' | 'writeMBps'>> = [
-  { device: '/dev/nvme0n1p2', mount: '/', fstype: 'ext4', sizeGB: 240, health: 'ok' },
-  { device: '/dev/nvme0n1p1', mount: '/boot', fstype: 'vfat', sizeGB: 1, health: 'ok' },
-  { device: '/dev/sda1', mount: '/data', fstype: 'xfs', sizeGB: 4000, health: 'warn' },
-  { device: '/dev/sdb1', mount: '/backup', fstype: 'ext4', sizeGB: 8000, health: 'ok' },
-  { device: '/dev/mapper/vault', mount: '/vault', fstype: 'luks', sizeGB: 2000, health: 'ok' },
-];
+const DISK_DEFS: Array<Omit<Disk, 'usedGB' | 'tempC' | 'readMBps' | 'writeMBps'>> = [];
 
-const IFACE_DEFS: Array<Omit<NetIface, 'rxMbps' | 'txMbps'>> = [
-  { name: 'eno1', ip: '10.0.42.10', mac: 'a0:36:9f:12:4c:88', status: 'up', speedGbps: 10 },
-  { name: 'eno2', ip: '10.0.42.11', mac: 'a0:36:9f:12:4c:89', status: 'up', speedGbps: 10 },
-  { name: 'wg0', ip: '10.100.0.1', mac: '—', status: 'up', speedGbps: 1 },
-  { name: 'docker0', ip: '172.17.0.1', mac: '02:42:7a:9b:1d:0e', status: 'up', speedGbps: 1 },
-  { name: 'veth-plumb', ip: '—', mac: '9e:11:3a:bb:22:7f', status: 'down', speedGbps: 0 },
-];
+const IFACE_DEFS: Array<Omit<NetIface, 'rxMbps' | 'txMbps'>> = [];
 
-const PROCESS_DEFS: Array<Omit<Process, 'cpu' | 'memMB' | 'state'>> = [
-  { pid: 1, user: 'root', command: '/sbin/init', started: '2026-07-12 09:14' },
-  { pid: 482, user: 'root', command: '/usr/lib/systemd/systemd-journald', started: '2026-07-12 09:14' },
-  { pid: 611, user: 'systemd+', command: '/lib/systemd/systemd-networkd', started: '2026-07-12 09:14' },
-  { pid: 742, user: 'postgres', command: 'postgres: 14/main: writer', started: '2026-07-12 09:15' },
-  { pid: 1024, user: 'www-data', command: 'nginx: worker process', started: '2026-07-12 09:15' },
-  { pid: 1288, user: 'redis', command: '/usr/bin/redis-server *:6379', started: '2026-07-12 09:16' },
-  { pid: 1567, user: 'root', command: '/usr/bin/dockerd -H fd://', started: '2026-07-12 09:16' },
-  { pid: 2048, user: 'prometheus', command: '/usr/bin/node_exporter', started: '2026-07-12 09:17' },
-  { pid: 2210, user: 'grafana', command: '/usr/sbin/grafana server', started: '2026-07-12 09:17' },
-  { pid: 3010, user: 'root', command: '/usr/sbin/sshd -D', started: '2026-07-12 09:18' },
-  { pid: 3456, user: 'deploy', command: 'node /srv/api/dist/server.js', started: '2026-07-15 22:41' },
-  { pid: 4022, user: 'deploy', command: 'python3 batch_runner.py', started: '2026-07-18 03:02' },
-  { pid: 4188, user: 'git', command: 'git-http-backend', started: '2026-07-18 07:55' },
-  { pid: 4444, user: 'root', command: 'kworker/u32:2-events', started: '2026-07-12 09:14' },
-  { pid: 5021, user: 'monitor', command: '/usr/local/bin/healthcheck', started: '2026-07-18 08:10' },
-];
+const PROCESS_DEFS: Array<Omit<Process, 'cpu' | 'memMB' | 'state'>> = [];
 
-const LOG_TEMPLATES: Array<{ level: LogLevel; unit: string; message: string }> = [
-  { level: 'info', unit: 'sshd.service', message: 'Accepted publickey for deploy from 10.0.42.51 port 51824' },
-  { level: 'info', unit: 'nginx.service', message: 'GET /api/v1/health 200 12ms (127.0.0.1)' },
-  { level: 'warn', unit: 'grafana-server.service', message: 'Slow query detected: dashboard=overview (1.4s)' },
-  { level: 'error', unit: 'bluetooth.service', message: 'Failed to start Bluetooth daemon: adapter not found' },
-  { level: 'info', unit: 'postgresql.service', message: 'checkpoint complete: wrote 128 buffers (1.0MB)' },
-  { level: 'warn', unit: 'ufw.service', message: 'Blocked inbound TCP 23 from 192.168.0.14 to 10.0.42.10' },
-  { level: 'info', unit: 'docker.service', message: 'Container "redis" health status: healthy' },
-  { level: 'error', unit: 'kernel', message: 'EXT4-fs warning: sda1: checktime reached, running e2fsck recommended' },
-  { level: 'debug', unit: 'systemd-resolved.service', message: 'DNS query: api.internal -> 10.0.42.11 (cache hit)' },
-  { level: 'info', unit: 'fail2ban.service', message: 'Ban 203.0.113.45 for 1h (sshd, maxretry=5)' },
-  { level: 'warn', unit: 'node_exporter.service', message: 'collector "textfile" skipped: no textfiles dir' },
-  { level: 'info', unit: 'cron.service', message: 'Job `/usr/local/bin/backup.sh` finished in 4m12s' },
-];
+const LOG_TEMPLATES: Array<{ level: LogLevel; unit: string; message: string }> = [];
 
 const USERS = ['root', 'deploy', 'postgres', 'redis', 'www-data', 'monitor', 'git', 'grafana', 'systemd+'];
 const COMMANDS = [
