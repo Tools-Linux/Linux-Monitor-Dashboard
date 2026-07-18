@@ -9,7 +9,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { getCpuSnapshot, getMemorySnapshot } from '../lib/apiService';
+import { getCpuSnapshot, getDiskSnapshot, getMemorySnapshot } from '../lib/apiService';
 import { useLiveData } from '../lib/live';
 import { fmtBytes, fmtMbps, pct, usageTone } from '../lib/format';
 import { Ring, Sparkline } from '../components/Charts';
@@ -31,14 +31,24 @@ export function DashboardPage() {
   const [cpuCore, setCpuCore] = useState(String(live.sys.cores));
   const [cpuHistory, setCpuHistory] = useState<number[]>(() => live.cpuHistory.slice(-48));
   const [cpuUpdatedAt, setCpuUpdatedAt] = useState<string | null>(null);
+  const [fallbackDisk] = useState(() => {
+    const totalGb = live.disks.reduce((a, d) => a + d.sizeGB, 0);
+    const usedGb = live.disks.reduce((a, d) => a + d.usedGB, 0);
+    return {
+      totalGb,
+      usedGb,
+      freeGb: Math.max(totalGb - usedGb, 0),
+      usage: pct(usedGb, totalGb),
+    };
+  });
+  const [diskSnapshot, setDiskSnapshot] = useState(fallbackDisk);
+  const [diskUpdatedAt, setDiskUpdatedAt] = useState<string | null>(null);
   const [fallbackMemPct] = useState(() => pct(live.sys.memUsedGB, live.sys.memTotalGB));
   const [memPct, setMemPct] = useState(fallbackMemPct);
   const [memHistory, setMemHistory] = useState<number[]>(() => live.memHistory.slice(-48));
   const [memUpdatedAt, setMemUpdatedAt] = useState<string | null>(null);
 
   const swapPct = pct(live.sys.swapUsedGB, live.sys.swapTotalGB);
-  const totalDiskGB = live.disks.reduce((a, d) => a + d.sizeGB, 0);
-  const usedDiskGB = live.disks.reduce((a, d) => a + d.usedGB, 0);
 
   const runningServices = live.services.filter((s) => s.status === 'running').length;
   const failedServices = live.services.filter((s) => s.status === 'failed').length;
@@ -71,6 +81,23 @@ export function DashboardPage() {
       void loadCpu();
     }, 5000);
 
+    const loadDisk = async () => {
+      try {
+        const snapshot = await getDiskSnapshot(controller.signal);
+        if (!mounted) return;
+
+        setDiskSnapshot(snapshot);
+        setDiskUpdatedAt(new Date().toLocaleTimeString());
+      } catch {
+        if (mounted) setDiskSnapshot(fallbackDisk);
+      }
+    };
+
+    void loadDisk();
+    const diskRefreshId = window.setInterval(() => {
+      void loadDisk();
+    }, 5000);
+
     const loadMemory = async () => {
       try {
         const snapshot = await getMemorySnapshot(controller.signal);
@@ -93,6 +120,7 @@ export function DashboardPage() {
       mounted = false;
       controller.abort();
       window.clearInterval(refreshId);
+      window.clearInterval(diskRefreshId);
       window.clearInterval(memoryRefreshId);
     };
   }, [fallbackCpuPct]);
@@ -116,10 +144,10 @@ export function DashboardPage() {
         />
         <StatTile
           label="Stockage"
-          value={fmtBytes(usedDiskGB)}
-          sub={`${live.disks.length} volumes montés`}
-          used={usedDiskGB}
-          total={totalDiskGB}
+          value={fmtBytes(diskSnapshot.usedGb)}
+          sub={`${fmtBytes(diskSnapshot.freeGb)} libres · API /disk${diskUpdatedAt ? ` · ${diskUpdatedAt}` : ''}`}
+          used={diskSnapshot.usedGb}
+          total={diskSnapshot.totalGb}
           icon={<HardDrive size={18} />}
           accent="bg-warn-500"
         />
