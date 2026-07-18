@@ -9,7 +9,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { getCpuSnapshot } from '../lib/apiService';
+import { getCpuSnapshot, getMemorySnapshot } from '../lib/apiService';
 import { useLiveData } from '../lib/live';
 import { fmtBytes, fmtMbps, pct, usageTone } from '../lib/format';
 import { Ring, Sparkline } from '../components/Charts';
@@ -29,8 +29,11 @@ export function DashboardPage() {
   const [cpuPct, setCpuPct] = useState(fallbackCpuPct);
   const [cpuHistory, setCpuHistory] = useState<number[]>(() => live.cpuHistory.slice(-48));
   const [cpuUpdatedAt, setCpuUpdatedAt] = useState<string | null>(null);
+  const [fallbackMemPct] = useState(() => pct(live.sys.memUsedGB, live.sys.memTotalGB));
+  const [memPct, setMemPct] = useState(fallbackMemPct);
+  const [memHistory, setMemHistory] = useState<number[]>(() => live.memHistory.slice(-48));
+  const [memUpdatedAt, setMemUpdatedAt] = useState<string | null>(null);
 
-  const memPct = pct(live.sys.memUsedGB, live.sys.memTotalGB);
   const swapPct = pct(live.sys.swapUsedGB, live.sys.swapTotalGB);
   const totalDiskGB = live.disks.reduce((a, d) => a + d.sizeGB, 0);
   const usedDiskGB = live.disks.reduce((a, d) => a + d.usedGB, 0);
@@ -60,10 +63,29 @@ export function DashboardPage() {
       void loadCpu();
     }, 5000);
 
+    const loadMemory = async () => {
+      try {
+        const snapshot = await getMemorySnapshot(controller.signal);
+        if (!mounted) return;
+
+        setMemPct(snapshot.usage);
+        setMemHistory((prev) => [...prev.slice(1), snapshot.usage]);
+        setMemUpdatedAt(new Date().toLocaleTimeString());
+      } catch {
+        if (mounted) setMemPct(fallbackMemPct);
+      }
+    };
+
+    void loadMemory();
+    const memoryRefreshId = window.setInterval(() => {
+      void loadMemory();
+    }, 5000);
+
     return () => {
       mounted = false;
       controller.abort();
       window.clearInterval(refreshId);
+      window.clearInterval(memoryRefreshId);
     };
   }, [fallbackCpuPct]);
 
@@ -79,10 +101,8 @@ export function DashboardPage() {
         />
         <StatTile
           label="Mémoire RAM"
-          value={`${live.sys.memUsedGB.toFixed(1)} / ${live.sys.memTotalGB} GB`}
-          sub={`Cache ${live.sys.memCachedGB.toFixed(1)} GB · Swap ${live.sys.swapUsedGB.toFixed(1)} GB`}
-          used={live.sys.memUsedGB}
-          total={live.sys.memTotalGB}
+          value={`${memPct.toFixed(1)}%`}
+          sub={`API /memory${memUpdatedAt ? ` · ${memUpdatedAt}` : ''}`}
           icon={<Server size={18} />}
           accent="bg-accent-500"
         />
@@ -134,9 +154,10 @@ export function DashboardPage() {
             <div>
               <div className="mb-1 flex justify-between text-xs text-ink-300">
                 <span>RAM</span>
-                <span className="font-mono text-accent-400">{live.sys.memUsedGB.toFixed(1)} GB</span>
+                <span className="font-mono text-accent-400">{memPct.toFixed(2)}%</span>
               </div>
-              <Sparkline data={live.memHistory} color="#0ea5e9" height={56} max={live.sys.memTotalGB} />
+              <Sparkline data={memHistory} color="#0ea5e9" height={56} max={100} />
+              <p className="mt-2 text-[11px] text-ink-500">Dernière API : {memUpdatedAt ?? 'en attente...'}</p>
             </div>
           </div>
         </div>
