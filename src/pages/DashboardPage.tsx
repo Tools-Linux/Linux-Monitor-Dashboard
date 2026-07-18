@@ -27,6 +27,8 @@ export function DashboardPage() {
   const live = useLiveData();
   const [fallbackCpuPct] = useState(() => live.cpuHistory[live.cpuHistory.length - 1] ?? 0);
   const [cpuPct, setCpuPct] = useState(fallbackCpuPct);
+  const [cpuName, setCpuName] = useState(live.sys.cpuModel);
+  const [cpuCore, setCpuCore] = useState(String(live.sys.cores));
   const [cpuHistory, setCpuHistory] = useState<number[]>(() => live.cpuHistory.slice(-48));
   const [cpuUpdatedAt, setCpuUpdatedAt] = useState<string | null>(null);
   const [fallbackMemPct] = useState(() => pct(live.sys.memUsedGB, live.sys.memTotalGB));
@@ -51,10 +53,16 @@ export function DashboardPage() {
         if (!mounted) return;
 
         setCpuPct(snapshot.usage);
+        setCpuName(snapshot.name);
+        setCpuCore(snapshot.core);
         setCpuHistory((prev) => [...prev.slice(1), snapshot.usage]);
         setCpuUpdatedAt(new Date().toLocaleTimeString());
       } catch {
-        if (mounted) setCpuPct(fallbackCpuPct);
+        if (mounted) {
+          setCpuPct(fallbackCpuPct);
+          setCpuName(live.sys.cpuModel);
+          setCpuCore(String(live.sys.cores));
+        }
       }
     };
 
@@ -95,7 +103,7 @@ export function DashboardPage() {
         <StatTile
           label="Charge CPU"
           value={`${cpuPct.toFixed(1)}%`}
-          sub={`${cpuPct.toFixed(3)} cœurs · ${cpuPct.toFixed(3)}`}
+          sub={`${cpuName} · core ${cpuCore}`}
           icon={<Cpu size={18} />}
           accent="bg-brand-500"
         />
@@ -184,7 +192,8 @@ export function DashboardPage() {
             <Info label="Architecture" value={live.sys.arch} mono />
             <Info label="Uptime" value={live.sys.uptime} />
             <Info label="Processus" value={`${live.sys.processes} (${live.sys.threads} threads)`} />
-            <Info label="CPU" value={live.sys.cpuModel} span={3} />
+            <Info label="CPU" value={cpuName} span={3} />
+            <Info label="Core API" value={cpuCore} mono />
           </div>
         </div>
 

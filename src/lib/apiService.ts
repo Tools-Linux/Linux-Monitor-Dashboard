@@ -7,6 +7,8 @@ export type DiskSnapshot = {
 
 export type CpuSnapshot = {
   usage: number;
+  name: string;
+  core: string;
 };
 
 export type MemorySnapshot = {
@@ -32,7 +34,11 @@ function isCpuSnapshot(value: unknown): value is CpuSnapshot {
   if (!value || typeof value !== 'object') return false;
 
   const candidate = value as Record<string, unknown>;
-  return typeof candidate.usage === 'number';
+  return (
+    typeof candidate.usage === 'number' &&
+    typeof candidate.name === 'string' &&
+    (typeof candidate.core === 'string' || typeof candidate.core === 'number')
+  );
 }
 
 function isMemorySnapshot(value: unknown): value is MemorySnapshot {
@@ -72,7 +78,10 @@ export async function getCpuSnapshot(signal?: AbortSignal): Promise<CpuSnapshot>
     throw new Error('Réponse API invalide');
   }
 
-  return data;
+  return {
+    ...data,
+    core: String(data.core),
+  };
 }
 
 export async function getMemorySnapshot(signal?: AbortSignal): Promise<MemorySnapshot> {
