@@ -26,7 +26,8 @@ const statusMeta: Record<ServiceStatus, { label: string; cls: string; dot: strin
 export function DashboardPage() {
   const live = useLiveData();
   const [fallbackCpuPct] = useState(() => live.cpuHistory[live.cpuHistory.length - 1]);
-  const [cpuPct, setCpuPct] = useState(0);
+  const [cpuPct, setCpuPct] = useState(fallbackCpuPct);
+  const [cpuHistory, setCpuHistory] = useState<number[]>(() => live.cpuHistory);
   const memPct = pct(live.sys.memUsedGB, live.sys.memTotalGB);
   const swapPct = pct(live.sys.swapUsedGB, live.sys.swapTotalGB);
   const totalDiskGB = live.disks.reduce((a, d) => a + d.sizeGB, 0);
@@ -43,6 +44,9 @@ export function DashboardPage() {
       try {
         const snapshot = await getCpuSnapshot(controller.signal);
         if (mounted) setCpuPct(snapshot.usage);
+        if (mounted) {
+          setCpuHistory((prev) => [...prev.slice(1), snapshot.usage]);
+        }
       } catch {
         if (mounted) setCpuPct(fallbackCpuPct);
       }
@@ -66,7 +70,7 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
           label="Charge CPU"
-          value={`${cpuPct.toFixed(0)}%`}
+          value={`${cpuPct.toFixed(1)}%`}
           sub={`${live.sys.cores} cœurs · ${live.sys.cpuModel.split(' ').slice(0, 4).join(' ')}`}
           icon={<Cpu size={18} />}
           accent="bg-brand-500"
@@ -121,7 +125,7 @@ export function DashboardPage() {
                 <span>CPU</span>
                 <span className="font-mono text-brand-300">{cpuPct.toFixed(1)}%</span>
               </div>
-              <Sparkline data={live.cpuHistory} color="#10b981" height={56} max={100} />
+              <Sparkline data={cpuHistory} color="#10b981" height={56} max={100} />
             </div>
             <div>
               <div className="mb-1 flex justify-between text-xs text-ink-300">
