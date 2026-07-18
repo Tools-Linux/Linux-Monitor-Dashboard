@@ -10,7 +10,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { getCpuSnapshot } from '../lib/apiService';
+import { getCpuSnapshot, getMemorySnapshot } from '../lib/apiService';
 import type { Route } from '../lib/router';
 import { useLiveData } from '../lib/live';
 import { pct, usageTone } from '../lib/format';
@@ -34,7 +34,8 @@ export function Sidebar({ route, navigate }: SidebarProps) {
   const live = useLiveData();
   const [fallbackCpuPct] = useState(() => live.cpuHistory[live.cpuHistory.length - 1]);
   const [cpuPct, setCpuPct] = useState(fallbackCpuPct);
-  const memPct = pct(live.sys.memUsedGB, live.sys.memTotalGB);
+  const [fallbackMemPct] = useState(() => pct(live.sys.memUsedGB, live.sys.memTotalGB));
+  const [memPct, setMemPct] = useState(fallbackMemPct);
   const cpuTone = usageTone(cpuPct).bar;
   const memTone = usageTone(memPct).bar;
 
@@ -51,9 +52,20 @@ export function Sidebar({ route, navigate }: SidebarProps) {
       }
     };
 
+    const loadMemory = async () => {
+      try {
+        const snapshot = await getMemorySnapshot(controller.signal);
+        if (mounted) setMemPct(snapshot.usage);
+      } catch {
+        if (mounted) setMemPct(fallbackMemPct);
+      }
+    };
+
     void loadCpu();
+    void loadMemory();
     const refreshId = window.setInterval(() => {
       void loadCpu();
+      void loadMemory();
     }, 5000);
 
     return () => {
