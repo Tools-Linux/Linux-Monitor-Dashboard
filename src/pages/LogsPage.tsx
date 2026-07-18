@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pause, Play, Trash2 } from 'lucide-react';
 import { useLiveData } from '../lib/live';
 import type { LogLevel } from '../lib/data';
+import { getLogsSnapshot, type ApiLogEntry } from '../lib/apiService';
 
 const levelMeta: Record<LogLevel, { cls: string; dot: string; label: string }> = {
   info: { cls: 'text-brand-300', dot: 'bg-brand-500', label: 'INFO' },
@@ -12,24 +13,106 @@ const levelMeta: Record<LogLevel, { cls: string; dot: string; label: string }> =
 
 type Filter = 'all' | LogLevel;
 
+type UiLogEntry = {
+  id: string;
+  time: string;
+  level: LogLevel;
+  unit: string;
+  message: string;
+};
+
+function normalizeLevel(value: string): LogLevel {
+  const level = value.toLowerCase();
+  if (level === 'info' || level === 'warn' || level === 'error' || level === 'debug') {
+    return level;
+  }
+
+  if (level === 'warning') return 'warn';
+  if (level === 'err') return 'error';
+  return 'info';
+}
+
+function extractTime(timestamp: string): string {
+  const parsed = new Date(timestamp);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().substring(11, 19);
+  }
+
+  return timestamp;
+}
+
+function mapApiLogs(entries: ApiLogEntry[]): UiLogEntry[] {
+  return entries
+    .map((entry, index) => ({
+      id: `${entry.timestamp}-${entry.service}-${entry.pid}-${index}`,
+      time: extractTime(entry.timestamp),
+      level: normalizeLevel(entry.level),
+      unit: `${entry.service} (pid:${entry.pid})`,
+      message: entry.message,
+    }))
+    .reverse();
+}
+
+function mapFallbackLogs(entries: Array<{ id: number; time: string; level: LogLevel; unit: string; message: string }>): UiLogEntry[] {
+  return entries.map((entry) => ({
+    id: String(entry.id),
+    time: entry.time,
+    level: entry.level,
+    unit: entry.unit,
+    message: entry.message,
+  }));
+}
+
 export function LogsPage() {
   const live = useLiveData();
   const [filter, setFilter] = useState<Filter>('all');
   const [paused, setPaused] = useState(false);
   const [query, setQuery] = useState('');
+  const [apiLogs, setApiLogs] = useState<UiLogEntry[] | null>(null);
+  const [fallbackLogs] = useState<UiLogEntry[]>(() => mapFallbackLogs(live.logs));
   const scrollRef = useRef<HTMLDivElement>(null);
+  const logsSource = apiLogs ?? fallbackLogs;
 
-  const logs = live.logs.filter((l) => {
+  const logs = logsSource.filter((l) => {
     if (filter !== 'all' && l.level !== filter) return false;
     if (query && !`${l.unit} ${l.message}`.toLowerCase().includes(query.toLowerCase())) return false;
     return true;
   });
 
   useEffect(() => {
+    const controller = new AbortController();
+    let mounted = true;
+
+    const loadLogs = async () => {
+      if (paused) return;
+
+      try {
+        const snapshot = await getLogsSnapshot(controller.signal);
+        if (!mounted) return;
+
+        setApiLogs(mapApiLogs(snapshot.logs));
+      } catch {
+        if (mounted) setApiLogs(null);
+      }
+    };
+
+    void loadLogs();
+    const refreshId = window.setInterval(() => {
+      void loadLogs();
+    }, 5000);
+
+    return () => {
+      mounted = false;
+      controller.abort();
+      window.clearInterval(refreshId);
+    };
+  }, [paused]);
+
+  useEffect(() => {
     if (!paused && scrollRef.current) {
       scrollRef.current.scrollTop = 0;
     }
-  }, [live.logs, paused]);
+  }, [logs, paused]);
 
   return (
     <div className="space-y-4">
@@ -61,7 +144,7 @@ export function LogsPage() {
             {paused ? <Play size={15} /> : <Pause size={15} />}
             {paused ? 'Live' : 'Pause'}
           </button>
-          <button className="btn btn-ghost" title="Effacer"><Trash2 size={15} /></button>
+          <button onClick={() => setApiLogs([])} className="btn btn-ghost" title="Effacer"><Trash2 size={15} /></button>
         </div>
       </div>
 

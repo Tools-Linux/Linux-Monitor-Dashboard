@@ -42,6 +42,18 @@ export type ServicesSnapshot = {
   list: ServiceItem[];
 };
 
+export type ApiLogEntry = {
+  timestamp: string;
+  level: string;
+  service: string;
+  pid: string;
+  message: string;
+};
+
+export type LogsSnapshot = {
+  logs: ApiLogEntry[];
+};
+
 const API_BASE_URL = 'http://192.168.1.130:5000/api';
 
 function isDiskSnapshot(value: unknown): value is DiskSnapshot {
@@ -99,12 +111,47 @@ function isServicesSnapshot(value: unknown): value is ServicesSnapshot {
   );
 }
 
+function isApiLogEntry(value: unknown): value is ApiLogEntry {
+  if (!value || typeof value !== 'object') return false;
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.timestamp === 'string' &&
+    typeof candidate.level === 'string' &&
+    typeof candidate.service === 'string' &&
+    typeof candidate.pid === 'string' &&
+    typeof candidate.message === 'string'
+  );
+}
+
+function isLogsSnapshot(value: unknown): value is LogsSnapshot {
+  if (!value || typeof value !== 'object') return false;
+
+  const candidate = value as Record<string, unknown>;
+  return Array.isArray(candidate.logs) && candidate.logs.every(isApiLogEntry);
+}
+
 function unwrapServicesPayload(value: unknown): unknown {
   if (!value || typeof value !== 'object') return value;
 
   const candidate = value as Record<string, unknown>;
   if ('services' in candidate) {
     return candidate.services;
+  }
+
+  return value;
+}
+
+function unwrapLogsPayload(value: unknown): unknown {
+  if (!value || typeof value !== 'object') return value;
+
+  const candidate = value as Record<string, unknown>;
+  if ('logs' in candidate && Array.isArray(candidate.logs)) {
+    return value;
+  }
+
+  if ('data' in candidate) {
+    return candidate.data;
   }
 
   return value;
@@ -176,6 +223,17 @@ export async function getServicesSnapshot(signal?: AbortSignal): Promise<Service
   const payload = unwrapServicesPayload(data);
 
   if (!isServicesSnapshot(payload)) {
+    throw new Error('Réponse API invalide');
+  }
+
+  return payload;
+}
+
+export async function getLogsSnapshot(signal?: AbortSignal): Promise<LogsSnapshot> {
+  const data = await fetchJson<unknown>('/logs', signal);
+  const payload = unwrapLogsPayload(data);
+
+  if (!isLogsSnapshot(payload)) {
     throw new Error('Réponse API invalide');
   }
 
