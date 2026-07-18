@@ -19,6 +19,8 @@ export type MemorySnapshot = {
   usedMb?: number;
   totalMb?: number;
   freeMb?: number;
+  usagePercent?: number;
+  availableMb?: number;
 };
 
 const API_BASE_URL = 'http://192.168.1.130:5000/api';
@@ -45,9 +47,16 @@ function isMemorySnapshot(value: unknown): value is MemorySnapshot {
   if (!value || typeof value !== 'object') return false;
 
   const candidate = value as Record<string, unknown>;
-  if (typeof candidate.usage !== 'number') return false;
+  const hasLegacyShape = typeof candidate.usage === 'number';
+  const hasMbShape =
+    typeof candidate.totalMb === 'number' &&
+    typeof candidate.usedMb === 'number' &&
+    typeof candidate.availableMb === 'number' &&
+    typeof candidate.usagePercent === 'number';
 
-  const optionalNumberFields = ['usedGb', 'totalGb', 'freeGb', 'usedMb', 'totalMb', 'freeMb'];
+  if (!hasLegacyShape && !hasMbShape) return false;
+
+  const optionalNumberFields = ['usedGb', 'totalGb', 'freeGb', 'usedMb', 'totalMb', 'freeMb', 'usagePercent', 'availableMb'];
   return optionalNumberFields.every((key) => candidate[key] == null || typeof candidate[key] === 'number');
 }
 
@@ -89,6 +98,24 @@ export async function getMemorySnapshot(signal?: AbortSignal): Promise<MemorySna
 
   if (!isMemorySnapshot(data)) {
     throw new Error('Réponse API invalide');
+  }
+
+  if (typeof data.usagePercent === 'number' && typeof data.availableMb === 'number') {
+    const usedGb = data.usedMb != null ? data.usedMb / 1024 : undefined;
+    const totalGb = data.totalMb != null ? data.totalMb / 1024 : undefined;
+    const freeGb = data.availableMb / 1024;
+
+    return {
+      usage: data.usagePercent,
+      usedMb: data.usedMb,
+      totalMb: data.totalMb,
+      freeMb: data.availableMb,
+      usedGb,
+      totalGb,
+      freeGb,
+      usagePercent: data.usagePercent,
+      availableMb: data.availableMb,
+    };
   }
 
   return data;
