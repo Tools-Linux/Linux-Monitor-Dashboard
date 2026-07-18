@@ -30,6 +30,18 @@ export type MemorySnapshot = {
   availableMb?: number;
 };
 
+export type ServiceItem = {
+  name: string;
+  state: string;
+};
+
+export type ServicesSnapshot = {
+  total: number;
+  enabled: number;
+  disabled: number;
+  list: ServiceItem[];
+};
+
 const API_BASE_URL = 'http://192.168.1.130:5000/api';
 
 function isDiskSnapshot(value: unknown): value is DiskSnapshot {
@@ -65,6 +77,26 @@ function isMemorySnapshot(value: unknown): value is MemorySnapshot {
 
   const optionalNumberFields = ['usedGb', 'totalGb', 'freeGb', 'usedMb', 'totalMb', 'freeMb', 'usagePercent', 'availableMb'];
   return optionalNumberFields.every((key) => candidate[key] == null || typeof candidate[key] === 'number');
+}
+
+function isServiceItem(value: unknown): value is ServiceItem {
+  if (!value || typeof value !== 'object') return false;
+
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.name === 'string' && typeof candidate.state === 'string';
+}
+
+function isServicesSnapshot(value: unknown): value is ServicesSnapshot {
+  if (!value || typeof value !== 'object') return false;
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.total === 'number' &&
+    typeof candidate.enabled === 'number' &&
+    typeof candidate.disabled === 'number' &&
+    Array.isArray(candidate.list) &&
+    candidate.list.every(isServiceItem)
+  );
 }
 
 async function fetchJson<T>(path: string, signal?: AbortSignal): Promise<T> {
@@ -123,6 +155,16 @@ export async function getMemorySnapshot(signal?: AbortSignal): Promise<MemorySna
       usagePercent: data.usagePercent,
       availableMb: data.availableMb,
     };
+  }
+
+  return data;
+}
+
+export async function getServicesSnapshot(signal?: AbortSignal): Promise<ServicesSnapshot> {
+  const data = await fetchJson<unknown>('/services', signal);
+
+  if (!isServicesSnapshot(data)) {
+    throw new Error('Réponse API invalide');
   }
 
   return data;

@@ -9,19 +9,37 @@ import {
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { getCpuSnapshot, getDiskSnapshot, getMemorySnapshot } from '../lib/apiService';
+import { getCpuSnapshot, getDiskSnapshot, getMemorySnapshot, getServicesSnapshot, type ServiceItem, type ServicesSnapshot } from '../lib/apiService';
 import { useLiveData } from '../lib/live';
 import { fmtBytes, fmtMbps, pct, usageTone } from '../lib/format';
 import { Ring, Sparkline } from '../components/Charts';
 import { StatTile } from '../components/StatTile';
-import type { ServiceStatus } from '../lib/data';
 
-const statusMeta: Record<ServiceStatus, { label: string; cls: string; dot: string }> = {
-  running: { label: 'En marche', cls: 'bg-brand-500/10 text-brand-300 ring-brand-500/30', dot: 'bg-brand-500' },
-  stopped: { label: 'Arrêté', cls: 'bg-ink-700/60 text-ink-300 ring-ink-600', dot: 'bg-ink-400' },
-  failed: { label: 'Échec', cls: 'bg-err-500/10 text-err-400 ring-err-500/30', dot: 'bg-err-500' },
-  degraded: { label: 'Dégradé', cls: 'bg-warn-500/10 text-warn-400 ring-warn-500/30', dot: 'bg-warn-500' },
+const serviceStateMeta: Record<string, { label: string; cls: string; dot: string }> = {
+  enabled: { label: 'Activé', cls: 'bg-brand-500/10 text-brand-300 ring-brand-500/30', dot: 'bg-brand-500' },
+  disabled: { label: 'Désactivé', cls: 'bg-ink-700/60 text-ink-300 ring-ink-600', dot: 'bg-ink-400' },
+  static: { label: 'Statique', cls: 'bg-accent-500/10 text-accent-300 ring-accent-500/30', dot: 'bg-accent-500' },
 };
+
+function describeServiceState(state: string) {
+  return serviceStateMeta[state] ?? { label: state, cls: 'bg-ink-700/60 text-ink-300 ring-ink-600', dot: 'bg-ink-500' };
+}
+
+function toFallbackServices(services: Array<{ name: string; enabled: boolean }>): ServiceItem[] {
+  return services.map((service) => ({
+    name: service.name,
+    state: service.enabled ? 'enabled' : 'disabled',
+  }));
+}
+
+function summarizeServices(snapshot: ServicesSnapshot | null, fallback: ServiceItem[]) {
+  const list = snapshot?.list ?? fallback;
+  const total = snapshot?.total ?? list.length;
+  const enabled = snapshot?.enabled ?? list.filter((service) => service.state === 'enabled').length;
+  const disabled = snapshot?.disabled ?? list.filter((service) => service.state === 'disabled').length;
+
+  return { total, enabled, disabled, list };
+}
 
 export function DashboardPage() {
   const live = useLiveData();
@@ -36,8 +54,8 @@ export function DashboardPage() {
   const [osname, setOsname] = useState(live.sys.os);
   const [kernel, setKernel] = useState(live.sys.kernel);
   const [cpuTemp, setCpuTemp] = useState(live.sys.tempCpu);
-  const [services, setServices] = useState(live.services);
-  const [servicesCount, setServicesCount] = useState(live.sys.servicescount);
+  const [servicesSnapshot, setServicesSnapshot] = useState<ServicesSnapshot | null>(null);
+  const [fallbackServices] = useState(() => toFallbackServices(live.services));
   const [cpuHistory, setCpuHistory] = useState<number[]>(() => live.cpuHistory.slice(-48));
   const [cpuUpdatedAt, setCpuUpdatedAt] = useState<string | null>(null);
   const [fallbackDisk] = useState(() => {
@@ -56,11 +74,9 @@ export function DashboardPage() {
   const [memPct, setMemPct] = useState(fallbackMemPct);
   const [memHistory, setMemHistory] = useState<number[]>(() => live.memHistory.slice(-48));
   const [memUpdatedAt, setMemUpdatedAt] = useState<string | null>(null);
+  const serviceSummary = summarizeServices(servicesSnapshot, fallbackServices);
 
   const swapPct = pct(live.sys.swapUsedGB, live.sys.swapTotalGB);
-
-  const runningServices = live.services.filter((s) => s.status === 'running').length;
-  const failedServices = live.services.filter((s) => s.status === 'failed').length;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -81,8 +97,6 @@ export function DashboardPage() {
         setKernel(snapshot.kernel);
         setOsname(snapshot.os);
         setCpuTemp(snapshot.tempCpu);
-        setServices(live.services);
-        setServicesCount(live.sys.servicescount);
         setCpuHistory((prev) => [...prev.slice(1), snapshot.usage]);
         setCpuUpdatedAt(new Date().toLocaleTimeString());
       } catch {
@@ -97,16 +111,30 @@ export function DashboardPage() {
           setKernel(live.sys.kernel);
           setOsname(live.sys.os);
           setCpuTemp(live.sys.tempCpu);
-          setServices(live.services);
-          setServicesCount(live.sys.servicescount);
         }
       }
     };
 
+    const loadServices = async () => {
+      try {
+        const snapshot = await getServicesSnapshot(controller.signal);
+        if (!mounted) return;
+
+        setServicesSnapshot(snapshot);
+      } catch {
+        if (mounted) setServicesSnapshot(null);
+      }
+    };
+
     void loadCpu();
+    void loadServices();
     const refreshId = window.setInterval(() => {
       void loadCpu();
     }, 5000);
+
+    const servicesRefreshId = window.setInterval(() => {
+      void loadServices();
+    }, 15000);
 
     const loadDisk = async () => {
       try {
@@ -147,6 +175,7 @@ export function DashboardPage() {
       mounted = false;
       controller.abort();
       window.clearInterval(refreshId);
+      window.clearInterval(servicesRefreshId);
       window.clearInterval(diskRefreshId);
       window.clearInterval(memoryRefreshId);
     };
@@ -261,7 +290,7 @@ export function DashboardPage() {
               value={`${cpuTemp.toFixed(0)}°C`}
               tone={cpuTemp > 70 ? 'text-err-400' : 'text-brand-300'}
             />
-            <Sensor icon={<Zap size={16} />} label="Consommation" value={`null} W`} tone="text-warn-400" />
+            <Sensor icon={<Zap size={16} />} label="Consommation" value={`${live.sys.powerWatts.toFixed(0)} W`} tone="text-warn-400" />
             <Sensor
               icon={<Power size={16} />}
               label="Disques sains"
@@ -270,9 +299,9 @@ export function DashboardPage() {
             />
             <Sensor
               icon={<Activity size={16} />}
-              label="Services actifs"
-              value={`${runningServices}/${servicesCount}`}
-              tone={failedServices > 0 ? 'text-warn-400' : 'text-brand-300'}
+              label="Services activés"
+              value={`${serviceSummary.enabled}/${serviceSummary.total}`}
+              tone={serviceSummary.disabled > 0 ? 'text-warn-400' : 'text-brand-300'}
             />
           </div>
         </div>
@@ -309,15 +338,15 @@ export function DashboardPage() {
         <div className="card card-pad">
           <h2 className="text-sm font-semibold text-white">État des services</h2>
           <div className="mt-4 space-y-2">
-            {live.services.slice(0, 6).map((s) => {
-              const m = statusMeta[s.status];
+            {serviceSummary.list.slice(0, 6).map((service) => {
+              const m = describeServiceState(service.state);
               return (
-                <div key={s.unit} className="flex items-center justify-between rounded-lg border border-ink-700/50 bg-ink-850/40 px-3 py-2.5">
+                <div key={service.name} className="flex items-center justify-between rounded-lg border border-ink-700/50 bg-ink-850/40 px-3 py-2.5">
                   <div className="flex items-center gap-3">
                     <span className={`dot ${m.dot}`} />
                     <div>
-                      <p className="text-sm font-medium text-ink-100">{s.name}</p>
-                      <p className="font-mono text-[11px] text-ink-400">{s.unit}</p>
+                      <p className="text-sm font-medium text-ink-100">{service.name}</p>
+                      <p className="font-mono text-[11px] text-ink-400">{service.state}</p>
                     </div>
                   </div>
                   <span className={`chip ring-1 ring-inset ${m.cls}`}>{m.label}</span>

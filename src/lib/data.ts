@@ -6,6 +6,14 @@ export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
 export interface Service {
   name: string;
+  unit: string;
+  status: ServiceStatus;
+  enabled: boolean;
+  description: string;
+  cpu: number;
+  memMB: number;
+  pid: number;
+  uptime: string;
 }
 
 export interface Disk {
@@ -212,6 +220,7 @@ export function makeSystemInfo(cores: CpuCore[]): SystemInfo {
     powerWatts: rand(120, 210),
     processes: 312,
     threads: 1842,
+    servicescount: 155,
   };
 }
 

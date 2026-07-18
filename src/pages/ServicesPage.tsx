@@ -1,42 +1,94 @@
-import { useState } from 'react';
-import { Pause, Play, RotateCw, Square } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useLiveData } from '../lib/live';
-import type { ServiceStatus } from '../lib/data';
+import { getServicesSnapshot, type ServiceItem, type ServicesSnapshot } from '../lib/apiService';
 
-const statusMeta: Record<ServiceStatus, { label: string; cls: string; dot: string }> = {
-  running: { label: 'En marche', cls: 'bg-brand-500/10 text-brand-300 ring-brand-500/30', dot: 'bg-brand-500' },
-  stopped: { label: 'Arrêté', cls: 'bg-ink-700/60 text-ink-300 ring-ink-600', dot: 'bg-ink-400' },
-  failed: { label: 'Échec', cls: 'bg-err-500/10 text-err-400 ring-err-500/30', dot: 'bg-err-500' },
-  degraded: { label: 'Dégradé', cls: 'bg-warn-500/10 text-warn-400 ring-warn-500/30', dot: 'bg-warn-500' },
+const stateMeta: Record<string, { label: string; cls: string; dot: string }> = {
+  enabled: { label: 'Activé', cls: 'bg-brand-500/10 text-brand-300 ring-brand-500/30', dot: 'bg-brand-500' },
+  disabled: { label: 'Désactivé', cls: 'bg-ink-700/60 text-ink-300 ring-ink-600', dot: 'bg-ink-400' },
+  static: { label: 'Statique', cls: 'bg-accent-500/10 text-accent-300 ring-accent-500/30', dot: 'bg-accent-500' },
 };
 
-type Filter = 'all' | ServiceStatus;
+type Filter = 'all' | 'enabled' | 'disabled' | 'static';
+
+function describeState(state: string) {
+  return stateMeta[state] ?? { label: state, cls: 'bg-ink-700/60 text-ink-300 ring-ink-600', dot: 'bg-ink-500' };
+}
+
+function toFallbackServices(services: Array<{ name: string; enabled: boolean }>): ServiceItem[] {
+  return services.map((service) => ({
+    name: service.name,
+    state: service.enabled ? 'enabled' : 'disabled',
+  }));
+}
+
+function summarizeServices(snapshot: ServicesSnapshot | null, fallback: ServiceItem[]) {
+  const list = snapshot?.list ?? fallback;
+
+  return {
+    total: snapshot?.total ?? list.length,
+    enabled: snapshot?.enabled ?? list.filter((service) => service.state === 'enabled').length,
+    disabled: snapshot?.disabled ?? list.filter((service) => service.state === 'disabled').length,
+    static: list.filter((service) => service.state === 'static').length,
+    list,
+  };
+}
 
 export function ServicesPage() {
   const live = useLiveData();
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
+  const [servicesSnapshot, setServicesSnapshot] = useState<ServicesSnapshot | null>(null);
+  const [fallbackServices] = useState(() => toFallbackServices(live.services));
 
-  const filtered = live.services.filter((s) => {
-    if (filter !== 'all' && s.status !== filter) return false;
-    if (query && !(`${s.name} ${s.unit} ${s.description}`.toLowerCase().includes(query.toLowerCase()))) return false;
+  useEffect(() => {
+    const controller = new AbortController();
+    let mounted = true;
+
+    const loadServices = async () => {
+      try {
+        const snapshot = await getServicesSnapshot(controller.signal);
+        if (!mounted) return;
+
+        setServicesSnapshot(snapshot);
+      } catch {
+        if (mounted) setServicesSnapshot(null);
+      }
+    };
+
+    void loadServices();
+    const refreshId = window.setInterval(() => {
+      void loadServices();
+    }, 15000);
+
+    return () => {
+      mounted = false;
+      controller.abort();
+      window.clearInterval(refreshId);
+    };
+  }, [live.services]);
+
+  const serviceSummary = summarizeServices(servicesSnapshot, fallbackServices);
+
+  const filtered = serviceSummary.list.filter((service) => {
+    if (filter !== 'all' && service.state !== filter) return false;
+    if (query && !service.name.toLowerCase().includes(query.toLowerCase())) return false;
     return true;
   });
 
   const counts = {
-    all: live.services.length,
-    running: live.services.filter((s) => s.status === 'running').length,
-    stopped: live.services.filter((s) => s.status === 'stopped').length,
-    failed: live.services.filter((s) => s.status === 'failed').length,
-    degraded: live.services.filter((s) => s.status === 'degraded').length,
+    all: serviceSummary.total,
+    enabled: serviceSummary.enabled,
+    disabled: serviceSummary.disabled,
+    static: serviceSummary.static,
   };
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-2">
-        {(['all', 'running', 'degraded', 'failed', 'stopped'] as Filter[]).map((f) => {
+        {(['all', 'enabled', 'disabled', 'static'] as Filter[]).map((f) => {
           const active = filter === f;
-          const m = f === 'all' ? null : statusMeta[f as ServiceStatus];
+          const meta = f === 'all' ? null : stateMeta[f];
+
           return (
             <button
               key={f}
@@ -45,8 +97,8 @@ export function ServicesPage() {
                 active ? 'bg-ink-700 text-white ring-ink-500' : 'bg-ink-850/50 text-ink-300 ring-ink-700 hover:text-white'
               }`}
             >
-              {m && <span className={`dot ${m.dot}`} />}
-              {f === 'all' ? 'Tous' : m!.label}
+              {meta && <span className={`dot ${meta.dot}`} />}
+              {f === 'all' ? 'Tous' : meta!.label}
               <span className="ml-1 rounded-full bg-ink-900/80 px-1.5 text-[10px] text-ink-400">{counts[f]}</span>
             </button>
           );
@@ -61,59 +113,39 @@ export function ServicesPage() {
         </div>
       </div>
 
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <MetricCard label="Total" value={serviceSummary.total} />
+        <MetricCard label="Activés" value={serviceSummary.enabled} tone="text-brand-300" />
+        <MetricCard label="Désactivés" value={serviceSummary.disabled} tone="text-ink-300" />
+        <MetricCard label="Statiques" value={serviceSummary.static} tone="text-accent-300" />
+      </div>
+
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-ink-700/60 bg-ink-850/40 text-left text-xs uppercase tracking-wider text-ink-400">
                 <th className="px-4 py-3 font-medium">Service</th>
-                <th className="px-4 py-3 font-medium">Statut</th>
-                <th className="px-4 py-3 font-medium">Activé</th>
-                <th className="px-4 py-3 text-right font-medium">CPU</th>
-                <th className="px-4 py-3 text-right font-medium">Mémoire</th>
-                <th className="px-4 py-3 font-medium">PID</th>
-                <th className="px-4 py-3 font-medium">Uptime</th>
-                <th className="px-4 py-3 text-right font-medium">Actions</th>
+                <th className="px-4 py-3 font-medium">État</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((s) => {
-                const m = statusMeta[s.status];
+              {filtered.map((service) => {
+                const meta = describeState(service.state);
+
                 return (
-                  <tr key={s.unit} className="border-b border-ink-800/60 table-row-hover">
+                  <tr key={service.name} className="border-b border-ink-800/60 table-row-hover">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <span className={`dot ${m.dot}`} />
+                        <span className={`dot ${meta.dot}`} />
                         <div>
-                          <p className="font-medium text-ink-100">{s.name}</p>
-                          <p className="font-mono text-[11px] text-ink-400">{s.unit}</p>
+                          <p className="font-medium text-ink-100">{service.name}</p>
+                          <p className="font-mono text-[11px] text-ink-400">api/services</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`chip ring-1 ring-inset ${m.cls}`}>{m.label}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`font-mono text-xs ${s.enabled ? 'text-brand-300' : 'text-ink-400'}`}>
-                        {s.enabled ? 'enabled' : 'disabled'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right font-mono text-ink-200">{s.cpu.toFixed(1)}%</td>
-                    <td className="px-4 py-3 text-right font-mono text-ink-200">{s.memMB} MB</td>
-                    <td className="px-4 py-3 font-mono text-ink-300">{s.pid}</td>
-                    <td className="px-4 py-3 text-ink-300">{s.uptime}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        {s.status === 'running' ? (
-                          <>
-                            <button className="btn btn-ghost px-2 py-1.5" title="Redémarrer"><RotateCw size={14} /></button>
-                            <button className="btn btn-ghost px-2 py-1.5" title="Arrêter"><Square size={14} /></button>
-                            <button className="btn btn-ghost px-2 py-1.5" title="Suspendre"><Pause size={14} /></button>
-                          </>
-                        ) : (
-                          <button className="btn btn-ghost px-2 py-1.5" title="Démarrer"><Play size={14} /></button>
-                        )}
-                      </div>
+                      <span className={`chip ring-1 ring-inset ${meta.cls}`}>{meta.label}</span>
                     </td>
                   </tr>
                 );
@@ -121,10 +153,17 @@ export function ServicesPage() {
             </tbody>
           </table>
         </div>
-        {filtered.length === 0 && (
-          <p className="py-10 text-center text-sm text-ink-400">Aucun service ne correspond.</p>
-        )}
+        {filtered.length === 0 && <p className="py-10 text-center text-sm text-ink-400">Aucun service ne correspond.</p>}
       </div>
+    </div>
+  );
+}
+
+function MetricCard({ label, value, tone = 'text-white' }: { label: string; value: number; tone?: string }) {
+  return (
+    <div className="card card-pad">
+      <p className="text-xs uppercase tracking-wider text-ink-400">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold ${tone}`}>{value}</p>
     </div>
   );
 }
