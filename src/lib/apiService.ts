@@ -99,6 +99,17 @@ function isServicesSnapshot(value: unknown): value is ServicesSnapshot {
   );
 }
 
+function unwrapServicesPayload(value: unknown): unknown {
+  if (!value || typeof value !== 'object') return value;
+
+  const candidate = value as Record<string, unknown>;
+  if ('services' in candidate) {
+    return candidate.services;
+  }
+
+  return value;
+}
+
 async function fetchJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, { signal });
 
@@ -162,10 +173,11 @@ export async function getMemorySnapshot(signal?: AbortSignal): Promise<MemorySna
 
 export async function getServicesSnapshot(signal?: AbortSignal): Promise<ServicesSnapshot> {
   const data = await fetchJson<unknown>('/services', signal);
+  const payload = unwrapServicesPayload(data);
 
-  if (!isServicesSnapshot(data)) {
+  if (!isServicesSnapshot(payload)) {
     throw new Error('Réponse API invalide');
   }
 
-  return data;
+  return payload;
 }
