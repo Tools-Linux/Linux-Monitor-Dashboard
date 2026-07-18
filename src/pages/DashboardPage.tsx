@@ -36,6 +36,8 @@ export function DashboardPage() {
   const [osname, setOsname] = useState(live.sys.os);
   const [kernel, setKernel] = useState(live.sys.kernel);
   const [cpuTemp, setCpuTemp] = useState(live.sys.tempCpu);
+  const [services, setServices] = useState(live.services);
+  const [servicesCount, setServicesCount] = useState(live.sys.servicescount);
   const [cpuHistory, setCpuHistory] = useState<number[]>(() => live.cpuHistory.slice(-48));
   const [cpuUpdatedAt, setCpuUpdatedAt] = useState<string | null>(null);
   const [fallbackDisk] = useState(() => {
@@ -79,6 +81,8 @@ export function DashboardPage() {
         setKernel(snapshot.kernel);
         setOsname(snapshot.os);
         setCpuTemp(snapshot.tempCpu);
+        setServices(live.services);
+        setServicesCount(live.sys.servicescount);
         setCpuHistory((prev) => [...prev.slice(1), snapshot.usage]);
         setCpuUpdatedAt(new Date().toLocaleTimeString());
       } catch {
@@ -93,6 +97,8 @@ export function DashboardPage() {
           setKernel(live.sys.kernel);
           setOsname(live.sys.os);
           setCpuTemp(live.sys.tempCpu);
+          setServices(live.services);
+          setServicesCount(live.sys.servicescount);
         }
       }
     };
@@ -255,8 +261,7 @@ export function DashboardPage() {
               value={`${cpuTemp.toFixed(0)}°C`}
               tone={cpuTemp > 70 ? 'text-err-400' : 'text-brand-300'}
             />
-            <Sensor icon={<Thermometer size={16} />} label="Temp. GPU" value={`${live.sys.tempGpu.toFixed(0)}°C`} tone="text-accent-400" />
-            <Sensor icon={<Zap size={16} />} label="Consommation" value={`${live.sys.powerWatts.toFixed(0)} W`} tone="text-warn-400" />
+            <Sensor icon={<Zap size={16} />} label="Consommation" value={`null} W`} tone="text-warn-400" />
             <Sensor
               icon={<Power size={16} />}
               label="Disques sains"
@@ -266,7 +271,7 @@ export function DashboardPage() {
             <Sensor
               icon={<Activity size={16} />}
               label="Services actifs"
-              value={`${runningServices}/${live.services.length}`}
+              value={`${runningServices}/${servicesCount}`}
               tone={failedServices > 0 ? 'text-warn-400' : 'text-brand-300'}
             />
           </div>

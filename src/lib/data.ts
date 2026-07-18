@@ -6,14 +6,6 @@ export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
 export interface Service {
   name: string;
-  unit: string;
-  status: ServiceStatus;
-  enabled: boolean;
-  cpu: number;
-  memMB: number;
-  pid: number;
-  uptime: string;
-  description: string;
 }
 
 export interface Disk {
@@ -70,6 +62,7 @@ export interface SystemInfo {
   arch: string;
   uptime: string;
   load: [number, number, number];
+  servicescount: number;
   cpuModel: string;
   cores: number;
   processes: number;
