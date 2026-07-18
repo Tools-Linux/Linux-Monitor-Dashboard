@@ -5,6 +5,10 @@ export type DiskSnapshot = {
   usage: number;
 };
 
+export type CpuSnapshot = {
+  usage: number;
+};
+
 const API_BASE_URL = 'http://localhost:5000/api';
 
 function isDiskSnapshot(value: unknown): value is DiskSnapshot {
@@ -12,6 +16,13 @@ function isDiskSnapshot(value: unknown): value is DiskSnapshot {
 
   const candidate = value as Record<string, unknown>;
   return ['totalGb', 'usedGb', 'freeGb', 'usage'].every((key) => typeof candidate[key] === 'number');
+}
+
+function isCpuSnapshot(value: unknown): value is CpuSnapshot {
+  if (!value || typeof value !== 'object') return false;
+
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.usage === 'number';
 }
 
 async function fetchJson<T>(path: string, signal?: AbortSignal): Promise<T> {
@@ -28,6 +39,16 @@ export async function getDiskSnapshot(signal?: AbortSignal): Promise<DiskSnapsho
   const data = await fetchJson<unknown>('/disk', signal);
 
   if (!isDiskSnapshot(data)) {
+    throw new Error('Réponse API invalide');
+  }
+
+  return data;
+}
+
+export async function getCpuSnapshot(signal?: AbortSignal): Promise<CpuSnapshot> {
+  const data = await fetchJson<unknown>('/cpu', signal);
+
+  if (!isCpuSnapshot(data)) {
     throw new Error('Réponse API invalide');
   }
 
