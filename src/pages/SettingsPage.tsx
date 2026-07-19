@@ -7,7 +7,13 @@ export function SettingsPage() {
   const [refresh, setRefresh] = useState(1500);
   const [theme, setTheme] = useState<'dark' | 'midnight'>('dark');
   const [notif, setNotif] = useState(true);
-  const [fallbackCpuPct] = useState(() => live.cpuHistory[live.cpuHistory.length - 1] ?? 0);
+  const [fallbackSystem] = useState(() => ({
+    hostname: live.sys.hostname,
+    os: live.sys.os,
+    kernel: live.sys.kernel,
+    arch: live.sys.arch,
+    uptime: live.informations[0]?.time,
+  }));
   const [hostname, setHostname] = useState(live.sys.hostname);
   const [osname, setOsname] = useState(live.sys.os);
   const [kernel, setKernel] = useState(live.sys.kernel);
@@ -15,37 +21,47 @@ export function SettingsPage() {
   const [uptime, setUptime] = useState(live.informations[0]?.time);
   const [autoRestart, setAutoRestart] = useState(true);
 
-
   useEffect(() => {
-      const controller = new AbortController();
-      let mounted = true;
-  
-      const loadCpu = async () => {
-        try {
-          const snapshot = await getCpuSnapshot(controller.signal);
-          const snapshotInfo = await getInformationSnapshot(controller.signal);
-          if (!mounted) return;
-  
-          setHostname(snapshot.host);
-          setKernel(snapshot.kernel);
-          setOsname(snapshot.os);
-          setCpuArch(snapshot.arch);
-          setUptime(snapshotInfo.time);
-        } catch {
-          if (mounted) {
-            setHostname(live.sys.hostname);
-            setKernel(live.sys.kernel);
-            setOsname(live.sys.os);
-            setCpuArch(live.sys.arch);
-            setUptime(live.informations[0]?.time);
-          }
-        }
-      };
+    const controller = new AbortController();
+    let mounted = true;
 
-    void loadCpu();
-    }, [fallbackCpuPct]);
+    const loadSystemInfo = async () => {
+      try {
+        const [snapshot, snapshotInfo] = await Promise.all([
+          getCpuSnapshot(controller.signal),
+          getInformationSnapshot(controller.signal),
+        ]);
 
+        if (!mounted) return;
 
+        setHostname(snapshot.host);
+        setKernel(snapshot.kernel);
+        setOsname(snapshot.os);
+        setCpuArch(snapshot.arch);
+        setUptime(snapshotInfo.time);
+      } catch {
+        if (!mounted) return;
+
+        setHostname(fallbackSystem.hostname);
+        setKernel(fallbackSystem.kernel);
+        setOsname(fallbackSystem.os);
+        setCpuArch(fallbackSystem.arch);
+        setUptime(fallbackSystem.uptime);
+      }
+    };
+
+    void loadSystemInfo();
+
+    const refreshId = window.setInterval(() => {
+      void loadSystemInfo();
+    }, refresh);
+
+    return () => {
+      mounted = false;
+      controller.abort();
+      window.clearInterval(refreshId);
+    };
+  }, [fallbackSystem, refresh]);
 
   return (
     <div className="space-y-5">
