@@ -54,6 +54,7 @@ export function DashboardPage() {
   const [osname, setOsname] = useState(live.sys.os);
   const [kernel, setKernel] = useState(live.sys.kernel);
   const [cpuTemp, setCpuTemp] = useState(live.sys.tempCpu);
+  const [uptime, setUptime] = useState(live.informations[0]?.time);
   const [servicesSnapshot, setServicesSnapshot] = useState<ServicesSnapshot | null>(null);
   const [fallbackServices] = useState(() => toFallbackServices(live.services));
   const [cpuHistory, setCpuHistory] = useState<number[]>(() => live.cpuHistory.slice(-48));
@@ -97,6 +98,7 @@ export function DashboardPage() {
         setKernel(snapshot.kernel);
         setOsname(snapshot.os);
         setCpuTemp(snapshot.tempCpu);
+        setUptime(live.informations[0]?.time);
         setCpuHistory((prev) => [...prev.slice(1), snapshot.usage]);
         setCpuUpdatedAt(new Date().toLocaleTimeString());
       } catch {
@@ -111,6 +113,7 @@ export function DashboardPage() {
           setKernel(live.sys.kernel);
           setOsname(live.sys.os);
           setCpuTemp(live.sys.tempCpu);
+          setUptime(live.informations[0]?.time);
         }
       }
     };
@@ -274,7 +277,7 @@ export function DashboardPage() {
             <Info label="OS" value={osname} />
             <Info label="Noyau" value={kernel} mono />
             <Info label="Architecture" value={cpuArch} mono />
-            <Info label="Uptime" value={live.sys.uptime} />
+            <Info label="Uptime" value={uptime} />
             <Info label="Processus" value={`${cpuProcessorCount} (${cpuThreads} threads)`} />
             <Info label="CPU" value={cpuName} span={3} />
             <Info label="Core API" value={cpuCore} mono />

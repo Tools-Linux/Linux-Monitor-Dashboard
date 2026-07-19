@@ -18,6 +18,10 @@ export type CpuSnapshot = {
   tempCpu: number;
 };
 
+export type InformationSnapshot = {
+  time: string;
+}
+
 export type MemorySnapshot = {
   usage: number;
   usedGb?: number;
@@ -73,6 +77,16 @@ function isCpuSnapshot(value: unknown): value is CpuSnapshot {
     (typeof candidate.core === 'string' || typeof candidate.core === 'number')
   );
 }
+
+function isInformationSnapshot(value: unknown): value is InformationSnapshot {
+  if (!value || typeof value !== 'object') return false;
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.time === 'string'
+  );
+}
+
 
 function isMemorySnapshot(value: unknown): value is MemorySnapshot {
   if (!value || typeof value !== 'object') return false;
@@ -189,6 +203,18 @@ export async function getCpuSnapshot(signal?: AbortSignal): Promise<CpuSnapshot>
     core: String(data.core),
   };
 }
+export async function getInformationSnapshot(signal?: AbortSignal): Promise<InformationSnapshot> {
+  const data = await fetchJson<unknown>('/information', signal);
+
+  if (!isInformationSnapshot(data)) {
+    throw new Error('Réponse API invalide');
+  }
+  return {
+    ...data,
+    time: String(data.time),
+  };
+}
+
 
 export async function getMemorySnapshot(signal?: AbortSignal): Promise<MemorySnapshot> {
   const data = await fetchJson<unknown>('/memory', signal);

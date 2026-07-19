@@ -16,6 +16,8 @@ import {
   type Process,
   type Service,
   type SystemInfo,
+  type Information,
+  makeInformation,
 } from './data';
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
@@ -23,6 +25,7 @@ const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(mi
 export interface LiveState {
   sys: SystemInfo;
   services: Service[];
+  informations: Information[];
   disks: Disk[];
   ifaces: NetIface[];
   processes: Process[];
@@ -41,6 +44,7 @@ function initial(): LiveState {
   return {
     sys,
     services: makeServices(),
+    informations: makeInformation(),
     disks: makeDisks(),
     ifaces: makeIfaces(),
     processes: makeProcesses(),
@@ -107,6 +111,7 @@ export function useLiveData(): LiveState {
         memHistory: [...prev.memHistory.slice(1), memUsedGB],
         netRxHistory: [...prev.netRxHistory.slice(1), netRx],
         netTxHistory: [...prev.netTxHistory.slice(1), netTx],
+        informations: makeInformation(),
       });
     }, 1500);
     return () => clearInterval(tick);
