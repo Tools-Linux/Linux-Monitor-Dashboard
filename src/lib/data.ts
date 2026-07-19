@@ -63,6 +63,11 @@ export interface CpuCore {
   tempC: number;
 }
 
+export interface CpuLoad {
+  core: number;
+  usage: number;
+}
+
 export interface SystemInfo {
   hostname: string;
   os: string;

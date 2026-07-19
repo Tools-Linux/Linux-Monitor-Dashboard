@@ -50,8 +50,7 @@ export function SettingsPage() {
       }
     };
 
-    void loadSystemInfo();
-
+    void loadSystemInfo(); 
     const refreshId = window.setInterval(() => {
       void loadSystemInfo();
     }, refresh);
