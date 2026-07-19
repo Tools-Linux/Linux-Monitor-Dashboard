@@ -1,21 +1,56 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLiveData } from '../lib/live';
+import { getCpuSnapshot } from '../lib/apiService';
 
 export function SettingsPage() {
   const live = useLiveData();
   const [refresh, setRefresh] = useState(1500);
   const [theme, setTheme] = useState<'dark' | 'midnight'>('dark');
   const [notif, setNotif] = useState(true);
+  const [fallbackCpuPct] = useState(() => live.cpuHistory[live.cpuHistory.length - 1] ?? 0);
+  const [hostname, setHostname] = useState(live.sys.hostname);
+  const [osname, setOsname] = useState(live.sys.os);
+  const [kernel, setKernel] = useState(live.sys.kernel);
+  const [cpuArch, setCpuArch] = useState(live.sys.arch);
   const [autoRestart, setAutoRestart] = useState(true);
+
+
+  useEffect(() => {
+      const controller = new AbortController();
+      let mounted = true;
+  
+      const loadCpu = async () => {
+        try {
+          const snapshot = await getCpuSnapshot(controller.signal);
+          if (!mounted) return;
+  
+          setHostname(snapshot.host);
+          setKernel(snapshot.kernel);
+          setOsname(snapshot.os);
+          setCpuArch(snapshot.arch);
+        } catch {
+          if (mounted) {
+            setHostname(live.sys.hostname);
+            setKernel(live.sys.kernel);
+            setOsname(live.sys.os);
+            setCpuArch(live.sys.arch);
+          }
+        }
+      };
+
+    void loadCpu();
+    }, [fallbackCpuPct]);
+
+
 
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Section title="Profil système">
-          <Row label="Nom d'hôte" value={live.sys.hostname} />
-          <Row label="Système d'exploitation" value={live.sys.os} />
-          <Row label="Noyau" value={live.sys.kernel} mono />
-          <Row label="Architecture" value={live.sys.arch} mono />
+          <Row label="Nom d'hôte" value={hostname} />
+          <Row label="Système d'exploitation" value={osname} />
+          <Row label="Noyau" value={kernel} mono />
+          <Row label="Architecture" value={cpuArch} mono />
           <Row label="Uptime actuel" value={live.sys.uptime} />
         </Section>
 
