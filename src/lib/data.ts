@@ -68,7 +68,6 @@ export interface SystemInfo {
   os: string;
   kernel: string;
   arch: string;
-  uptime: string;
   load: [number, number, number];
   servicescount: number;
   cpuModel: string;
@@ -90,6 +89,10 @@ export interface SystemInfo {
   threads: number;
 }
 
+export interface Information {
+  time: string;
+}
+
 const rand = (min: number, max: number) => Math.random() * (max - min) + min;
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
 
@@ -104,6 +107,8 @@ const IFACE_DEFS: Array<Omit<NetIface, 'rxMbps' | 'txMbps'>> = [];
 const PROCESS_DEFS: Array<Omit<Process, 'cpu' | 'memMB' | 'state'>> = [];
 
 const LOG_TEMPLATES: Array<{ level: LogLevel; unit: string; message: string }> = [];
+
+const INFO_DEFS: Array<Omit<Information, 'time'>> = [];
 
 const USERS = ['root', 'deploy', 'postgres', 'redis', 'www-data', 'monitor', 'git', 'grafana', 'systemd+'];
 const COMMANDS = [
@@ -145,7 +150,6 @@ export function makeSystemInfo(cores: CpuCore[]): SystemInfo {
     os: 'Debian GNU/Linux 12 (bookworm)',
     kernel: '6.1.0-21-amd64',
     arch: 'x86_64',
-    uptime: fmtUptime(),
     load: [0.42, 0.58, 0.61],
     cpuModel: 'AMD Ryzen 9 7950X 16-Core/32-Threads',
     cores: cores.length,
@@ -175,6 +179,13 @@ export function makeServices(): Service[] {
     memMB: s.status === 'running' ? rand(40, 920) : 0,
     pid: 800 + i * 37,
     uptime: s.status === 'running' ? '6j 14h' : s.status === 'stopped' ? '—' : '3j 02h',
+  }));
+}
+
+export function makeInformation(): Information[] {
+  return INFO_DEFS.map((i) => ({
+    ...i,
+    time: new Date().toISOString(),
   }));
 }
 

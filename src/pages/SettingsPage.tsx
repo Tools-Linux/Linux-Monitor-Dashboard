@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLiveData } from '../lib/live';
-import { getCpuSnapshot } from '../lib/apiService';
+import { getCpuSnapshot, getInformationSnapshot } from '../lib/apiService';
 
 export function SettingsPage() {
   const live = useLiveData();
@@ -12,6 +12,7 @@ export function SettingsPage() {
   const [osname, setOsname] = useState(live.sys.os);
   const [kernel, setKernel] = useState(live.sys.kernel);
   const [cpuArch, setCpuArch] = useState(live.sys.arch);
+  const [uptime, setUptime] = useState(live.informations[0]?.time);
   const [autoRestart, setAutoRestart] = useState(true);
 
 
@@ -22,18 +23,21 @@ export function SettingsPage() {
       const loadCpu = async () => {
         try {
           const snapshot = await getCpuSnapshot(controller.signal);
+          const snapshotInfo = await getInformationSnapshot(controller.signal);
           if (!mounted) return;
   
           setHostname(snapshot.host);
           setKernel(snapshot.kernel);
           setOsname(snapshot.os);
           setCpuArch(snapshot.arch);
+          setUptime(snapshotInfo.time);
         } catch {
           if (mounted) {
             setHostname(live.sys.hostname);
             setKernel(live.sys.kernel);
             setOsname(live.sys.os);
             setCpuArch(live.sys.arch);
+            setUptime(live.informations[0]?.time);
           }
         }
       };
@@ -51,7 +55,7 @@ export function SettingsPage() {
           <Row label="Système d'exploitation" value={osname} />
           <Row label="Noyau" value={kernel} mono />
           <Row label="Architecture" value={cpuArch} mono />
-          <Row label="Uptime actuel" value={live.sys.uptime} />
+          <Row label="Uptime actuel" value={uptime} />
         </Section>
 
         <Section title="Préférences d'affichage">
