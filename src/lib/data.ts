@@ -111,6 +111,7 @@ export interface SystemInfo {
   tempGpu: number;
   powerWatts: number;
   threads: number;
+  charge: []
 }
 
 export interface Information {
@@ -193,6 +194,7 @@ export function makeSystemInfo(partial: Partial<SystemInfo>): SystemInfo {
     processes: 0,
     threads: 0,
     servicescount: 0,
+    charge: [],
     ...partial,
   };
 }

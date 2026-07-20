@@ -166,13 +166,6 @@ export function NetworkPage(){
           </table>
         </div>
       </div>
-
-      <div className="card card-pad">
-        <div className="flex items-center gap-2 text-sm font-semibold text-white">
-          <NetworkIcon size={16} className="text-brand-300"/>
-          Connexions actives
-        </div>
-      </div>
     </div>
   );
 }
