@@ -1,4 +1,4 @@
-import { Network } from "./data";
+import { Disk, Network } from "./data";
 
 export type DiskSnapshot = {
   totalGb: number;

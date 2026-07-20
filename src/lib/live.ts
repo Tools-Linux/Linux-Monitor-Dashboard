@@ -18,6 +18,8 @@ import {
   type Information,
   type Network,
   makeInformation,
+  type LsblkResponse,
+  makeLsblk,
 } from './data';
 
 const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v));
@@ -27,6 +29,7 @@ export interface LiveState {
   services: Service[];
   informations: Information[];
   disks: Disk[];
+  lsblk: LsblkResponse;
   network: Network[];
   processes: Process[];
   logs: LogEntry[];
@@ -46,6 +49,7 @@ function initial(): LiveState {
     services: makeServices(),
     informations: makeInformation(),
     disks: makeDisks(),
+    lsblk: makeLsblk ? makeLsblk() : { blockdevices: [] }, 
     network: makeIfaces(),
     processes: makeProcesses(),
     logs: seedLogs(40),
@@ -53,7 +57,7 @@ function initial(): LiveState {
     memHistory: Array.from({ length: HIST_LEN }, () => sys.memUsedGB),
     netRxHistory: Array.from({ length: HIST_LEN }, () => 80),
     netTxHistory: Array.from({ length: HIST_LEN }, () => 40),
-  } as LiveState;
+  };
 }
 
 export function useLiveData(): LiveState {
@@ -65,7 +69,6 @@ export function useLiveData(): LiveState {
     const tick = setInterval(() => {
       const prev = ref.current;
       
-      // 1. Calculs CPU, Mémoire et Systèmes
       const cores = walkCores(prev.sys.cpuCores);
       const avgCpu = cores.reduce((a, c) => a + c.usage, 0) / cores.length;
       const memUsedGB = walk(prev.sys.memUsedGB, 24, 52, 1.2);
@@ -77,18 +80,15 @@ export function useLiveData(): LiveState {
       const load5 = +clamp(load1 * 0.9 + 0.1, 0, 4).toFixed(2);
       const load15 = +clamp(load5 * 0.95 + 0.05, 0, 4).toFixed(2);
 
-      // 2. Mise à jour des interfaces Réseau individuelles
       const updatedNetwork = prev.network.map((n) => ({
         ...n,
         rxMbps: +walk(n.rxMbps, 5, 600, 50).toFixed(1),
         txMbps: +walk(n.txMbps, 2, 300, 30).toFixed(1),
       }));
 
-      // 3. Somme globale pour l'historique du réseau
       const totalRx = updatedNetwork.reduce((acc, n) => acc + n.rxMbps, 0);
       const totalTx = updatedNetwork.reduce((acc, n) => acc + n.txMbps, 0);
 
-      // 4. Envoi du nouvel état complet
       setState({
         sys: {
           ...prev.sys,
@@ -112,6 +112,8 @@ export function useLiveData(): LiveState {
           writeMBps: +walk(d.writeMBps, 0, 180, 22).toFixed(1),
           tempC: +walk(d.tempC, 26, 52, 2).toFixed(0),
         })),
+      
+        lsblk: prev.lsblk, 
         processes: prev.processes
           .map((p) => ({ ...p, cpu: +walk(p.cpu, 0, 35, 3).toFixed(1) }))
           .sort((a, b) => b.cpu - a.cpu),

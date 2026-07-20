@@ -21,6 +21,12 @@ const serviceStateMeta: Record<string, { label: string; cls: string; dot: string
   static: { label: 'Statique', cls: 'bg-accent-500/10 text-accent-300 ring-accent-500/30', dot: 'bg-accent-500' },
 };
 
+const diskHealthMeta: Record<string, { cls: string; text: string }> = {
+  ok: { cls: 'bg-brand-500/10 text-brand-300 ring-brand-500/30', text: 'Sain' },
+  warn: { cls: 'bg-warn-500/10 text-warn-300 ring-warn-500/30', text: 'Attention' },
+  critical: { cls: 'bg-err-500/10 text-err-300 ring-err-500/30', text: 'Critique' },
+};
+
 function describeServiceState(state: string) {
   return serviceStateMeta[state] ?? { label: state, cls: 'bg-ink-700/60 text-ink-300 ring-ink-600', dot: 'bg-ink-500' };
 }
@@ -59,6 +65,7 @@ export function DashboardPage() {
   const [fallbackServices] = useState(() => toFallbackServices(live.services));
   const [cpuHistory, setCpuHistory] = useState<number[]>(() => live.cpuHistory.slice(-48));
   const [cpuUpdatedAt, setCpuUpdatedAt] = useState<string | null>(null);
+
   const [fallbackDisk] = useState(() => {
     const totalGb = live.disks.reduce((a, d) => a + d.sizeGB, 0);
     const usedGb = live.disks.reduce((a, d) => a + d.usedGB, 0);
@@ -67,6 +74,7 @@ export function DashboardPage() {
       usedGb,
       freeGb: Math.max(totalGb - usedGb, 0),
       usage: pct(usedGb, totalGb),
+      disks: live.disks,
     };
   });
   const [diskSnapshot, setDiskSnapshot] = useState(fallbackDisk);
@@ -337,7 +345,49 @@ export function DashboardPage() {
         </div>
       </div>
 
+      {/* SECTION DU NOUVEAU SYSTEME DE DISQUE ENRICHIE */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="card card-pad">
+          <h2 className="text-sm font-semibold text-white">Occupation & Performance des disques</h2>
+          <div className="mt-4 space-y-4">
+            {diskSnapshot.disks?.map((d) => {
+              const p = pct(d.usedGB, d.sizeGB);
+              const tone = usageTone(p);
+              const health = diskHealthMeta[d.health] ?? { cls: 'bg-ink-700 text-ink-300 ring-ink-600', text: d.health };
+
+              return (
+                <div key={d.device} className="rounded-xl border border-ink-700/40 bg-ink-850/20 p-3 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm font-semibold text-ink-100">{d.mount}</span>
+                      <span className={`chip text-[10px] py-0.5 px-1.5 ring-1 ring-inset ${health.cls}`}>{health.text}</span>
+                    </div>
+                    <span className="text-ink-400 font-mono">
+                      {d.usedGB.toFixed(1)} / {d.sizeGB} GB
+                    </span>
+                  </div>
+
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-ink-700">
+                    <div className={`h-full rounded-full ${tone.bar} transition-all`} style={{ width: `${p}%` }} />
+                  </div>
+
+                  <div className="flex justify-between items-center text-[11px] text-ink-400 pt-1 border-t border-ink-700/30">
+                    <div>
+                      <span className="font-medium text-ink-300">{d.device}</span> · <span className="uppercase font-mono text-[10px]">{d.fstype}</span>
+                    </div>
+                    <div className="flex items-center gap-3 font-mono">
+                      <span>{d.tempC}°C</span>
+                      <span className="text-brand-400">↓ {d.readMBps.toFixed(1)} MB/s</span>
+                      <span className="text-accent-400">↑ {d.writeMBps.toFixed(1)} MB/s</span>
+                      <span className={`font-semibold ${tone.text}`}>{p.toFixed(0)}%</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="card card-pad">
           <h2 className="text-sm font-semibold text-white">État des services</h2>
           <div className="mt-4 space-y-2">
@@ -358,37 +408,60 @@ export function DashboardPage() {
             })}
           </div>
         </div>
+      </div>
 
-        <div className="card card-pad">
-          <h2 className="text-sm font-semibold text-white">Occupation des disques</h2>
-          <div className="mt-4 space-y-3">
-            {live.disks.map((d) => {
-              const p = pct(d.usedGB, d.sizeGB);
-              const tone = usageTone(p);
-              return (
-                <div key={d.device}>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-mono text-ink-200">{d.mount}</span>
-                    <span className="text-ink-400">
-                      {d.usedGB.toFixed(0)} / {d.sizeGB} GB
-                    </span>
-                  </div>
-                  <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-ink-700">
-                    <div className={`h-full rounded-full ${tone.bar} transition-all`} style={{ width: `${p}%` }} />
-                  </div>
-                  <div className="mt-1 flex justify-between text-[10px] text-ink-500">
-                    <span>
-                      {d.device} · {d.fstype}
-                    </span>
-                    <span className={tone.text}>{p.toFixed(0)}%</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      {/* HISTOGRAMME / LISTE DE LA TOPOLOGIE COMPLÈTE (LSBLK) */}
+      <div className="card card-pad">
+        <h2 className="text-sm font-semibold text-white">Topologie des blocs physiques (lsblk)</h2>
+        <p className="text-xs text-ink-400 mb-4">Structure matérielle brute de la table des périphériques</p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs text-ink-300">
+            <thead>
+              <tr className="border-b border-ink-700 text-ink-400 uppercase tracking-wider text-[10px]">
+                <th className="py-2 px-3">Périphérique</th>
+                <th className="py-2 px-3">Modèle</th>
+                <th className="py-2 px-3">Type</th>
+                <th className="py-2 px-3">Taille</th>
+                <th className="py-2 px-3">Point de montage</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-subtle font-mono">
+              {live.lsblk?.blockdevices.map((device) => (
+                <BlockDeviceRows key={device.name} device={device} depth={0} />
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
+  );
+}
+
+function BlockDeviceRows({ device, depth }: { device: any; depth: number }) {
+  return (
+    <>
+      <tr className={`${depth === 0 ? 'bg-ink-850/20 text-white' : 'text-ink-400 hover:bg-ink-800/10'}`}>
+        <td className="py-2.5 px-3 flex items-center">
+          <span style={{ paddingLeft: `${depth * 16}px` }} className="opacity-60 mr-1">
+            {depth > 0 ? '└─ ' : ''}
+          </span>
+          <span className={depth === 0 ? 'font-bold text-brand-300' : 'text-ink-200'}>
+            {device.name}
+          </span>
+        </td>
+        <td className="py-2.5 px-3 text-ink-400 truncate max-w-[180px]">{device.model ?? '-'}</td>
+        <td className="py-2.5 px-3">
+          <span className={`px-1.5 py-0.5 rounded text-[10px] ${device.type === 'disk' ? 'bg-brand-500/10 text-brand-400' : 'bg-ink-700/50 text-ink-400'}`}>
+            {device.type}
+          </span>
+        </td>
+        <td className="py-2.5 px-3 font-semibold">{device.size}</td>
+        <td className="py-2.5 px-3 text-accent-400">{device.mountpoint ?? '-'}</td>
+      </tr>
+      {device.children?.map((child: any) => (
+        <BlockDeviceRows key={child.name} device={child} depth={depth + 1} />
+      ))}
+    </>
   );
 }
 

@@ -1,6 +1,3 @@
-// Mock Linux monitoring data engine.
-// Generates realistic-ish, evolving time-series and tables for the dashboard.
-
 export type ServiceStatus = 'running' | 'stopped' | 'failed' | 'degraded';
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
@@ -136,6 +133,8 @@ const LOG_TEMPLATES: Array<{ level: LogLevel; unit: string; message: string }> =
 
 const INFO_DEFS: Array<Omit<Information, 'time'>> = [];
 
+const LSBLK_DEFS: BlockDevice[] = [];
+
 const USERS = ['root', 'deploy', 'postgres', 'redis', 'www-data', 'monitor', 'git', 'grafana', 'systemd+'];
 const COMMANDS = [
   '/usr/sbin/sshd -D',
@@ -211,6 +210,13 @@ export function makeInformation(): Information[] {
     ...i,
     time: new Date().toISOString(),
   }));
+}
+
+export function makeLsblk(): LsblkResponse {
+  // On renvoie une copie profonde pour éviter les mutations d'état directes
+  return {
+    blockdevices: JSON.parse(JSON.stringify(LSBLK_DEFS)),
+  };
 }
 
 export function makeDisks(): Disk[] {
