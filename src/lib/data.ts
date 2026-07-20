@@ -16,6 +16,20 @@ export interface Service {
   uptime: string;
 }
 
+export interface LsblkResponse {
+  blockdevices: BlockDevice[];
+}
+
+export interface BlockDevice {
+  name: string;
+  size: string;
+  type: string;
+  model: string | null;
+  serial: string | null;
+  mountpoint: string | null;
+  children?: BlockDevice[];
+}
+
 export interface Disk {
   device: string;
   mount: string;
@@ -27,6 +41,7 @@ export interface Disk {
   writeMBps: number;
   health: 'ok' | 'warn' | 'critical';
 }
+
 
 export interface Network {
   name: string;

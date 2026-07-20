@@ -5,6 +5,7 @@ export type DiskSnapshot = {
   usedGb: number;
   freeGb: number;
   usage: number;
+  disks: Disk[];
 };
 
 export type CpuSnapshot = {
