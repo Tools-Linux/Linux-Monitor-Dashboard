@@ -10,7 +10,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { getCpuSnapshot, getMemorySnapshot } from '../lib/apiService';
+import { getCpuSnapshot, getInformationSnapshot, getMemorySnapshot } from '../lib/apiService';
 import type { Route } from '../lib/router';
 import { useLiveData } from '../lib/live';
 import { pct, usageTone } from '../lib/format';
@@ -36,6 +36,7 @@ export function Sidebar({ route, navigate }: SidebarProps) {
   const [cpuPct, setCpuPct] = useState(fallbackCpuPct);
   const [fallbackMemPct] = useState(() => pct(live.sys.memUsedGB, live.sys.memTotalGB));
   const [memPct, setMemPct] = useState(fallbackMemPct);
+  const [namePct, setNamePct] = useState(live.sys.hostname);
   const cpuTone = usageTone(cpuPct).bar;
   const memTone = usageTone(memPct).bar;
 
@@ -47,6 +48,7 @@ export function Sidebar({ route, navigate }: SidebarProps) {
       try {
         const snapshot = await getCpuSnapshot(controller.signal);
         if (mounted) setCpuPct(snapshot.usage);
+        setNamePct(snapshot.name);
       } catch {
         if (mounted) setCpuPct(fallbackCpuPct);
       }
@@ -83,7 +85,7 @@ export function Sidebar({ route, navigate }: SidebarProps) {
         </div>
         <div>
           <p className="text-sm font-semibold text-white">Linux-Monitor</p>
-          <p className="text-[11px] text-ink-400">srv-prod-01</p>
+          <p className="text-[11px] text-ink-400">{namePct}</p>
         </div>
       </div>
 
