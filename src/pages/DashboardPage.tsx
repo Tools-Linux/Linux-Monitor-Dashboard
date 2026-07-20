@@ -345,7 +345,6 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* SECTION DU NOUVEAU SYSTEME DE DISQUE ENRICHIE */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="card card-pad">
           <h2 className="text-sm font-semibold text-white">Occupation & Performance des disques</h2>
@@ -407,30 +406,6 @@ export function DashboardPage() {
               );
             })}
           </div>
-        </div>
-      </div>
-
-      {/* HISTOGRAMME / LISTE DE LA TOPOLOGIE COMPLÈTE (LSBLK) */}
-      <div className="card card-pad">
-        <h2 className="text-sm font-semibold text-white">Topologie des blocs physiques (lsblk)</h2>
-        <p className="text-xs text-ink-400 mb-4">Structure matérielle brute de la table des périphériques</p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-ink-300">
-            <thead>
-              <tr className="border-b border-ink-700 text-ink-400 uppercase tracking-wider text-[10px]">
-                <th className="py-2 px-3">Périphérique</th>
-                <th className="py-2 px-3">Modèle</th>
-                <th className="py-2 px-3">Type</th>
-                <th className="py-2 px-3">Taille</th>
-                <th className="py-2 px-3">Point de montage</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-subtle font-mono">
-              {live.lsblk?.blockdevices.map((device) => (
-                <BlockDeviceRows key={device.name} device={device} depth={0} />
-              ))}
-            </tbody>
-          </table>
         </div>
       </div>
     </div>
