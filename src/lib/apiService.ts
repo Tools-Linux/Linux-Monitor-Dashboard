@@ -1,3 +1,5 @@
+import { Network } from "./data";
+
 export type DiskSnapshot = {
   totalGb: number;
   usedGb: number;
@@ -80,10 +82,19 @@ function isDiskSnapshot(value: unknown): value is DiskSnapshot {
 }
 
 function isNetworkSnapshot(value: unknown): value is NetworkSnapshot {
-  if (!value || typeof value !== 'object') return false;
-
-  const candidate = value as Record<string, unknown>;
-  return ['name', 'ip', 'mac', 'status', 'rxMbps', 'txMbps', 'rxBytes', 'txBytes'].every((key) => typeof candidate[key] === 'number');
+  return (
+    Array.isArray(value) &&
+    value.every((item) =>
+      typeof item === 'object' &&
+      item !== null &&
+      typeof (item as Network).name === 'string' &&
+      typeof (item as Network).ip === 'string' &&
+      typeof (item as Network).mac === 'string' &&
+      ((item as Network).status === 'up' ||
+        (item as Network).status === 'down') &&
+      typeof (item as Network).speedMbps === 'number'
+    )
+  );
 }
 
 

@@ -40,6 +40,10 @@ export interface Network {
   txBytes: number;
 }
 
+export type NetworkSnapshot = Network[];
+
+export type NetworkSnapshotResponse = NetworkSnapshot;
+
 export interface Process {
   pid: number;
   user: string;
