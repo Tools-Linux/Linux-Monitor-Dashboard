@@ -356,7 +356,7 @@ export function DashboardPage() {
               const health = diskHealthMeta[d.health] ?? { cls: 'bg-ink-700 text-ink-300 ring-ink-600', text: d.health };
 
               return (
-                <div key={d.device} className="rounded-xl border border-ink-700/40 bg-ink-850/20 p-3 space-y-2">
+                <div key={d.model} className="rounded-xl border border-ink-700/40 bg-ink-850/20 p-3 space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-sm font-semibold text-ink-100">{d.mount}</span>

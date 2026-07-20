@@ -29,6 +29,7 @@ export interface BlockDevice {
 
 export interface Disk {
   device: string;
+  model: string;
   mount: string;
   fstype: string;
   sizeGB: number;
@@ -213,7 +214,6 @@ export function makeInformation(): Information[] {
 }
 
 export function makeLsblk(): LsblkResponse {
-  // On renvoie une copie profonde pour éviter les mutations d'état directes
   return {
     blockdevices: JSON.parse(JSON.stringify(LSBLK_DEFS)),
   };
@@ -247,7 +247,6 @@ export function makeProcesses(): Process[] {
     memMB: Math.round(rand(8, 1400)),
     state: (['R', 'S', 'S', 'S', 'D'] as const)[Math.floor(rand(0, 5))],
   }));
-  // add a few dynamic ones
   for (let i = 0; i < 4; i++) {
     base.push({
       pid: 6000 + i * 13,
@@ -280,7 +279,6 @@ export function seedLogs(n: number): LogEntry[] {
   return Array.from({ length: n }, () => makeLog()).reverse();
 }
 
-// Smooth random walk for live metrics
 export function walk(value: number, min: number, max: number, step: number): number {
   const next = value + rand(-step, step);
   return clamp(next, min, max);
