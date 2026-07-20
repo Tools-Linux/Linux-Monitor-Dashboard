@@ -23,6 +23,7 @@ export type NetworkSnapshot = {
   ip: string;
   mac: string;
   status: 'up' | 'down';
+  speedMbps: number;
   rxMbps: number;
   txMbps: number;
   rxBytes: number;
