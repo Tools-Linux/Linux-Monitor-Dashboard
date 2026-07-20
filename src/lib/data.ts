@@ -149,8 +149,31 @@ export function makeCpuCores(count: number): CpuCore[] {
 
 export function makeSystemInfo(partial: Partial<SystemInfo>): SystemInfo {
   return {
+    hostname: '',
+    os: '',
+    kernel: '',
+    arch: '',
+    load: [],
+    cpuModel: '',
+    cores: 0,
+    cpuCores: [],
+    memTotalGB: 0,
+    memUsedGB: 0,
+    memCachedGB: 0,
+    swapTotalGB: 0,
+    swapUsedGB: 0,
+    netRxMbps: 0,
+    netTxMbps: 0,
+    netRxTotalGB: 0,
+    netTxTotalGB: 0,
+    tempCpu: 0,
+    tempGpu: 0,
+    powerWatts: 0,
+    processes: 0,
+    threads: 0,
+    servicescount: 0,
     ...partial,
-  } as SystemInfo;
+  };
 }
 export function makeServices(): Service[] {
   return SERVICE_DEFS.map((s, i) => ({
