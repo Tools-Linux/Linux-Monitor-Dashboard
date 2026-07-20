@@ -147,10 +147,11 @@ export function makeCpuCores(count: number): CpuCore[] {
   }));
 }
 
-export function makeSystemInfo(): SystemInfo {
-  return {} as SystemInfo;
+export function makeSystemInfo(partial: Partial<SystemInfo>): SystemInfo {
+  return {
+    ...partial,
+  } as SystemInfo;
 }
-
 export function makeServices(): Service[] {
   return SERVICE_DEFS.map((s, i) => ({
     ...s,
