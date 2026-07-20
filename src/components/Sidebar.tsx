@@ -106,7 +106,7 @@ export function Sidebar({ route, navigate }: SidebarProps) {
             <span className="flex items-center gap-1.5 text-ink-300">
               <Cpu size={12} /> CPU
             </span>
-            <span className="font-mono text-ink-100">{cpuPct.toFixed(0)}%</span>
+            <span className="font-mono text-ink-100">{cpuPct}%</span>
           </div>
           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink-700">
             <div className={`h-full rounded-full ${cpuTone} transition-all`} style={{ width: `${cpuPct}%` }} />
@@ -117,7 +117,7 @@ export function Sidebar({ route, navigate }: SidebarProps) {
             <span className="flex items-center gap-1.5 text-ink-300">
               <HardDrive size={12} /> RAM
             </span>
-            <span className="font-mono text-ink-100">{memPct.toFixed(0)}%</span>
+            <span className="font-mono text-ink-100">{memPct}%</span>
           </div>
           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink-700">
             <div className={`h-full rounded-full ${memTone} transition-all`} style={{ width: `${memPct}%` }} />
