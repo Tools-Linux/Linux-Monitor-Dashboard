@@ -1,201 +1,219 @@
-import { useEffect, useState } from 'react';
+import { Network as NetworkIcon, Wifi, WifiOff } from 'lucide-react';
 import { useLiveData } from '../lib/live';
-import { getCpuSnapshot, getInformationSnapshot } from '../lib/apiService';
+import { fmtMbps } from '../lib/format';
+import { Sparkline } from '../components/Charts';
+import { getNetworkSnapshot } from '../lib/apiService';
+import { useEffect, useState } from 'react';
 
-export function SettingsPage() {
+type NetworkInterface = {
+  name: string;
+  ip: string;
+  mac: string;
+  status: 'up' | 'down';
+  speedMbps: number;
+  rxMbps: number;
+  txMbps: number;
+  rxBytes: number;
+  txBytes: number;
+};
+
+export function NetworkPage() {
   const live = useLiveData();
-  const [refresh, setRefresh] = useState(1500);
-  const [theme, setTheme] = useState<'dark' | 'midnight'>('dark');
-  const [notif, setNotif] = useState(true);
-  const [fallbackSystem] = useState(() => ({
-    hostname: live.sys.hostname,
-    os: live.sys.os,
-    kernel: live.sys.kernel,
-    arch: live.sys.arch,
-    uptime: live.informations[0]?.time,
-  }));
-  const [hostname, setHostname] = useState(live.sys.hostname);
-  const [osname, setOsname] = useState(live.sys.os);
-  const [kernel, setKernel] = useState(live.sys.kernel);
-  const [cpuArch, setCpuArch] = useState(live.sys.arch);
-  const [uptime, setUptime] = useState(live.informations[0]?.time);
-  const [autoRestart, setAutoRestart] = useState(true);
+  const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
-    let mounted = true;
 
-    const loadSystemInfo = async () => {
+    const loadNetwork = async () => {
       try {
-        const [snapshot, snapshotInfo] = await Promise.all([
-          getCpuSnapshot(controller.signal),
-          getInformationSnapshot(controller.signal),
-        ]);
+        const snapshot = await getNetworkSnapshot(controller.signal);
 
-        if (!mounted) return;
-
-        setHostname(snapshot.host);
-        setKernel(snapshot.kernel);
-        setOsname(snapshot.os);
-        setCpuArch(snapshot.arch);
-        setUptime(snapshotInfo.time);
-      } catch {
-        if (!mounted) return;
-
-        setHostname(fallbackSystem.hostname);
-        setKernel(fallbackSystem.kernel);
-        setOsname(fallbackSystem.os);
-        setCpuArch(fallbackSystem.arch);
-        setUptime(fallbackSystem.uptime);
+        if (Array.isArray(snapshot)) {
+          setInterfaces(snapshot);
+        }
+      } catch (error) {
+        console.error('Erreur chargement interfaces réseau:', error);
       }
     };
 
-    void loadSystemInfo(); 
-    const refreshId = window.setInterval(() => {
-      void loadSystemInfo();
-    }, refresh);
+    void loadNetwork();
+
+    const timer = window.setInterval(loadNetwork, 3000);
 
     return () => {
-      mounted = false;
       controller.abort();
-      window.clearInterval(refreshId);
+      clearInterval(timer);
     };
-  }, [fallbackSystem, refresh]);
+  }, []);
+
+  const upIfaces = interfaces.filter((n) => n.status === 'up');
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Section title="Profil système">
-          <Row label="Nom d'hôte" value={hostname} />
-          <Row label="Système d'exploitation" value={osname} />
-          <Row label="Noyau" value={kernel} mono />
-          <Row label="Architecture" value={cpuArch} mono />
-          <Row label="Uptime actuel" value={uptime} />
-        </Section>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="card card-pad lg:col-span-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-sm font-semibold text-white">
+                Trafic réseau global
+              </h2>
+              <p className="text-xs text-ink-400">
+                Débit instantané agrégé
+              </p>
+            </div>
 
-        <Section title="Préférences d'affichage">
-          <ToggleRow label="Notifications système" value={notif} onChange={setNotif} />
-          <ToggleRow label="Redémarrage auto des services échoués" value={autoRestart} onChange={setAutoRestart} />
-          <div className="flex items-center justify-between rounded-lg border border-ink-700/50 bg-ink-850/40 px-3 py-2.5">
-            <span className="text-sm text-ink-200">Thème</span>
-            <div className="flex gap-1 rounded-lg bg-ink-900/70 p-1">
-              {(['dark', 'midnight'] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setTheme(t)}
-                  className={`rounded-md px-3 py-1 text-xs font-medium transition ${
-                    theme === t ? 'bg-brand-500 text-ink-950' : 'text-ink-300 hover:text-white'
-                  }`}
-                >
-                  {t === 'dark' ? 'Sombre' : 'Minuit'}
-                </button>
-              ))}
+            <div className="flex gap-4 text-xs">
+              <span className="text-brand-300">● Reçu</span>
+              <span className="text-accent-400">● Émis</span>
             </div>
           </div>
-          <div className="rounded-lg border border-ink-700/50 bg-ink-850/40 px-3 py-2.5">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-ink-200">Fréquence de rafraîchissement</span>
-              <span className="font-mono text-brand-300">{(refresh / 1000).toFixed(1)}s</span>
+
+          <div className="mt-4 space-y-4">
+            <div>
+              <div className="mb-1 flex justify-between text-xs text-ink-300">
+                <span>↓ Téléchargement</span>
+                <span className="font-mono text-brand-300">
+                  {fmtMbps(live.sys.netRxMbps)}
+                </span>
+              </div>
+
+              <Sparkline
+                data={live.netRxHistory}
+                color="#10b981"
+                height={64}
+                max={650}
+              />
             </div>
-            <input
-              type="range"
-              min={500}
-              max={5000}
-              step={500}
-              value={refresh}
-              onChange={(e) => setRefresh(Number(e.target.value))}
-              className="mt-3 w-full accent-brand-500"
+
+            <div>
+              <div className="mb-1 flex justify-between text-xs text-ink-300">
+                <span>↑ Envoi</span>
+                <span className="font-mono text-accent-400">
+                  {fmtMbps(live.sys.netTxMbps)}
+                </span>
+              </div>
+
+              <Sparkline
+                data={live.netTxHistory}
+                color="#0ea5e9"
+                height={64}
+                max={350}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="card card-pad">
+          <h2 className="text-sm font-semibold text-white">
+            Totaux transférés
+          </h2>
+
+          <div className="mt-4 space-y-3">
+            <Total
+              label="Total reçu"
+              value={`${live.sys.netRxTotalGB} GB`}
+              tone="text-brand-300"
             />
-            <div className="mt-1 flex justify-between text-[10px] text-ink-500">
-              <span>0.5s</span>
-              <span>5s</span>
-            </div>
-          </div>
-        </Section>
 
-        <Section title="Alertes & seuils">
-          <ThresholdRow label="CPU >" unit="%" def={85} />
-          <ThresholdRow label="Mémoire >" unit="%" def={90} />
-          <ThresholdRow label="Disque >" unit="%" def={80} />
-          <ThresholdRow label="Température >" unit="°C" def={75} />
-        </Section>
+            <Total
+              label="Total émis"
+              value={`${live.sys.netTxTotalGB} GB`}
+              tone="text-accent-400"
+            />
 
-        <Section title="À propos">
-          <p className="text-sm text-ink-300">
-            <span className="font-semibold text-white">Linux-Monitor</span> est un tableau de bord de supervision
-            Linux inspiré de Proxmox/ProxMenux. Cette démonstration utilise des données simulées en temps réel.
-          </p>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-            <Meta k="Version" v="1.0.0" />
-            <Meta k="API" v="mock-engine" />
-            <Meta k="Rafraîchissement" v={`${(refresh / 1000).toFixed(1)}s`} />
-            <Meta k="Licence" v="MIT" />
+            <Total
+              label="Interfaces actives"
+              value={`${upIfaces.length}/${interfaces.length}`}
+              tone="text-ink-100"
+            />
+
+            <Total
+              label="Vitesse cumulée"
+              value={`${upIfaces.reduce((a, n) => a + n.speedMbps, 0)} Mbps`}
+              tone="text-ink-100"
+            />
           </div>
-        </Section>
+        </div>
+      </div>
+
+      <div className="card overflow-hidden">
+        <div className="border-b border-ink-700/60 px-4 py-3">
+          <h2 className="text-sm font-semibold text-white">
+            Interfaces réseau
+          </h2>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-ink-700/60 bg-ink-850/40 text-left text-xs uppercase text-ink-400">
+                <th className="px-4 py-3">Interface</th>
+                <th className="px-4 py-3">IP</th>
+                <th className="px-4 py-3">MAC</th>
+                <th className="px-4 py-3">Etat</th>
+                <th className="px-4 py-3 text-right">Vitesse</th>
+                <th className="px-4 py-3 text-right">Reçu</th>
+                <th className="px-4 py-3 text-right">Emis</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {interfaces.map((n) => (
+                <tr key={n.name} className="border-b border-ink-800/60">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      {n.status === 'up' ? (
+                        <Wifi size={15} />
+                      ) : (
+                        <WifiOff size={15} />
+                      )}
+
+                      <span className="font-mono">{n.name}</span>
+                    </div>
+                  </td>
+
+                  <td className="px-4 py-3 font-mono">{n.ip}</td>
+                  <td className="px-4 py-3 font-mono text-xs">{n.mac}</td>
+                  <td className="px-4 py-3">{n.status.toUpperCase()}</td>
+                  <td className="px-4 py-3 text-right">
+                    {n.speedMbps} Mbps
+                  </td>
+                  <td className="px-4 py-3 text-right text-brand-300">
+                    {fmtMbps(n.rxMbps)}
+                  </td>
+                  <td className="px-4 py-3 text-right text-accent-400">
+                    {fmtMbps(n.txMbps)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card card-pad">
+        <div className="flex items-center gap-2 text-sm font-semibold text-white">
+          <NetworkIcon size={16} className="text-brand-300" />
+          Connexions actives
+        </div>
       </div>
     </div>
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Total({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: string;
+}) {
   return (
-    <div className="card card-pad">
-      <h2 className="text-sm font-semibold text-white">{title}</h2>
-      <div className="mt-4 space-y-2">{children}</div>
-    </div>
-  );
-}
-
-function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-ink-700/50 bg-ink-850/40 px-3 py-2.5">
-      <span className="text-sm text-ink-300">{label}</span>
-      <span className={`text-sm text-ink-100 ${mono ? 'font-mono' : ''}`}>{value}</span>
-    </div>
-  );
-}
-
-function ToggleRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-ink-700/50 bg-ink-850/40 px-3 py-2.5">
-      <span className="text-sm text-ink-200">{label}</span>
-      <button
-        onClick={() => onChange(!value)}
-        className={`relative h-6 w-11 rounded-full transition ${value ? 'bg-brand-500' : 'bg-ink-700'}`}
-      >
-        <span
-          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${value ? 'left-[22px]' : 'left-0.5'}`}
-        />
-      </button>
-    </div>
-  );
-}
-
-function ThresholdRow({ label, unit, def }: { label: string; unit: string; def: number }) {
-  const [v, setV] = useState(def);
-  return (
-    <div className="rounded-lg border border-ink-700/50 bg-ink-850/40 px-3 py-2.5">
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-ink-200">{label}</span>
-        <span className="font-mono text-brand-300">{v}{unit}</span>
-      </div>
-      <input
-        type="range"
-        min={50}
-        max={100}
-        value={v}
-        onChange={(e) => setV(Number(e.target.value))}
-        className="mt-3 w-full accent-brand-500"
-      />
-    </div>
-  );
-}
-
-function Meta({ k, v }: { k: string; v: string }) {
-  return (
-    <div className="rounded-lg border border-ink-700/50 bg-ink-850/40 px-3 py-2">
-      <p className="text-[10px] uppercase tracking-wider text-ink-500">{k}</p>
-      <p className="font-mono text-ink-100">{v}</p>
+    <div className="flex justify-between rounded-lg border border-ink-700/50 bg-ink-850/40 px-3 py-2.5">
+      <span className="text-ink-300">{label}</span>
+      <span className={`font-mono font-semibold ${tone}`}>{value}</span>
     </div>
   );
 }
