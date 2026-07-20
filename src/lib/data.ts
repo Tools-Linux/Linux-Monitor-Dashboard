@@ -147,34 +147,8 @@ export function makeCpuCores(count: number): CpuCore[] {
   }));
 }
 
-export function makeSystemInfo(cores: CpuCore[]): SystemInfo {
-  const memTotalGB = 64;
-  const memUsedGB = rand(28, 38);
-  return {
-    hostname: 'srv-prod-01',
-    os: 'Debian GNU/Linux 12 (bookworm)',
-    kernel: '6.1.0-21-amd64',
-    arch: 'x86_64',
-    load: [0.42, 0.58, 0.61],
-    cpuModel: 'AMD Ryzen 9 7950X 16-Core/32-Threads',
-    cores: cores.length,
-    cpuCores: cores,
-    memTotalGB,
-    memUsedGB,
-    memCachedGB: rand(6, 10),
-    swapTotalGB: 8,
-    swapUsedGB: rand(0.2, 1.4),
-    netRxMbps: rand(40, 320),
-    netTxMbps: rand(20, 180),
-    netRxTotalGB: 1842.7,
-    netTxTotalGB: 968.1,
-    tempCpu: rand(52, 68),
-    tempGpu: rand(48, 70),
-    powerWatts: rand(120, 210),
-    processes: 312,
-    threads: 1842,
-    servicescount: 155,
-  };
+export function makeSystemInfo(): SystemInfo {
+  return {} as SystemInfo;
 }
 
 export function makeServices(): Service[] {
