@@ -50,6 +50,7 @@ function summarizeServices(snapshot: ServicesSnapshot | null, fallback: ServiceI
 export function DashboardPage() {
   const live = useLiveData();
   const [fallbackCpuPct] = useState(() => live.cpuHistory[live.cpuHistory.length - 1] ?? 0);
+  const [cpuCharge, setCpuCharge] = useState<Array<{core:string; usage:number}>>(() => []);
   const [cpuPct, setCpuPct] = useState(fallbackCpuPct);
   const [cpuName, setCpuName] = useState(live.sys.cpuModel);
   const [cpuCore, setCpuCore] = useState(String(live.sys.cores));
@@ -97,6 +98,7 @@ export function DashboardPage() {
         if (!mounted) return;
 
         setCpuPct(snapshot.usage);
+        setCpuCharge(snapshot.charge);
         setCpuName(snapshot.name);
         setCpuCore(snapshot.core);
         setCpuArch(snapshot.arch);
@@ -111,8 +113,9 @@ export function DashboardPage() {
         setCpuUpdatedAt(new Date().toLocaleTimeString());
       } catch {
         if (mounted) {
-          setCpuPct(fallbackCpuPct);
+          setCpuCharge([]);
           setCpuName(live.sys.cpuModel);
+          setCpuPct(fallbackCpuPct);
           setCpuCore(String(live.sys.cores));
           setCpuArch(live.sys.arch);
           setCpuProcessorCount(live.sys.processes);
@@ -324,24 +327,38 @@ export function DashboardPage() {
           <span className="text-xs text-ink-400">{live.sys.cores} cœurs logiques</span>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
-          {live.sys.cpuCores.map((c) => {
-            const tone = usageTone(c.usage);
-            return (
-              <div key={c.id} className="rounded-xl border border-ink-700/70 bg-ink-850/60 p-3">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-ink-400">C{c.id}</span>
-                  <span className="font-mono text-ink-100">{c.usage.toFixed(0)}%</span>
-                </div>
-                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink-700">
-                  <div className={`h-full rounded-full ${tone.bar} transition-all`} style={{ width: `${c.usage}%` }} />
-                </div>
-                <div className="mt-2 flex justify-between text-[10px] text-ink-400">
-                  <span>{c.freqGHz.toFixed(1)} GHz</span>
-                  <span>{c.tempC}°C</span>
-                </div>
+          {cpuCharge.map((c) => {
+          const tone = usageTone(c.usage);
+          return (
+            <div
+              key={c.core}
+              className="rounded-xl border border-ink-700/70 bg-ink-850/60 p-3"
+            >
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-ink-400">
+                  {c.core.toUpperCase()}
+                </span>
+
+                <span className="font-mono text-ink-100">
+                  {c.usage.toFixed(0)}%
+                </span>
               </div>
-            );
-          })}
+
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink-700">
+                <div
+                  className={`h-full rounded-full ${tone.bar} transition-all`}
+                  style={{
+                    width: `${Math.min(c.usage,100)}%`
+                  }}
+                />
+              </div>
+
+              <div className="mt-2 text-[10px] text-ink-400">
+                Charge API CPU
+              </div>
+            </div>
+          );
+        })}
         </div>
       </div>
 

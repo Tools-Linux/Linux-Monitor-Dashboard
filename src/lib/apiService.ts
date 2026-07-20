@@ -8,6 +8,11 @@ export type DiskSnapshot = {
   disks: Disk[];
 };
 
+export type CpuCoreLoad = {
+  core: string;
+  usage: number;
+};
+
 export type CpuSnapshot = {
   usage: number;
   name: string;
@@ -19,6 +24,7 @@ export type CpuSnapshot = {
   kernel: string;
   os: string;
   tempCpu: number;
+  charge: CpuCoreLoad[];
 };
 
 export type NetworkSnapshot = {
@@ -103,13 +109,21 @@ function isCpuSnapshot(value: unknown): value is CpuSnapshot {
   if (!value || typeof value !== 'object') return false;
 
   const candidate = value as Record<string, unknown>;
+
   return (
     typeof candidate.usage === 'number' &&
     typeof candidate.name === 'string' &&
-    (typeof candidate.core === 'string' || typeof candidate.core === 'number')
+    (typeof candidate.core === 'string' || typeof candidate.core === 'number') &&
+    Array.isArray(candidate.charge) &&
+    candidate.charge.every(
+      (item) =>
+        typeof item === 'object' &&
+        item !== null &&
+        typeof (item as CpuCoreLoad).core === 'string' &&
+        typeof (item as CpuCoreLoad).usage === 'number'
+    )
   );
 }
-
 function isInformationSnapshot(value: unknown): value is InformationSnapshot {
   if (!value || typeof value !== 'object') return false;
 
