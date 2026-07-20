@@ -359,7 +359,7 @@ export function DashboardPage() {
                 <div key={d.model} className="rounded-xl border border-ink-700/40 bg-ink-850/20 p-3 space-y-2">
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm font-semibold text-ink-100">{d.mount}</span>
+                      <span className="font-mono text-sm font-semibold text-ink-100">{d.model}</span>
                       <span className={`chip text-[10px] py-0.5 px-1.5 ring-1 ring-inset ${health.cls}`}>{health.text}</span>
                     </div>
                     <span className="text-ink-400 font-mono">
