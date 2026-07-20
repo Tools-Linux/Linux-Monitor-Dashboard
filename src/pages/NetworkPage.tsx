@@ -14,6 +14,7 @@ export function NetworkPage() {
     ip: live.network?.[0]?.ip ?? '',
     mac: live.network?.[0]?.mac ?? '',
     status: live.network?.[0]?.status ?? 'down',
+    speedMbps: live.network?.[0]?.speedMbps ?? 0,
     rxMbps: live.network?.[0]?.rxMbps ?? 0,
     txMbps: live.network?.[0]?.txMbps ?? 0,
     rxBytes: live.network?.[0]?.rxBytes ?? 0,
@@ -37,16 +38,17 @@ export function NetworkPage() {
         : snapshot;
 
 
-      setNetworkInfo({
-        name: network.name ?? '',
-        ip: network.ip ?? '',
-        mac: network.mac ?? '',
-        status: network.status ?? 'down',
-        rxMbps: network.rxMbps ?? 0,
-        txMbps: network.txMbps ?? 0,
-        rxBytes: network.rxBytes ?? 0,
-        txBytes: network.txBytes ?? 0,
-      });
+    setNetworkInfo({
+      name: network.name ?? '',
+      ip: network.ip ?? '',
+      mac: network.mac ?? '',
+      status: network.status ?? 'down',
+      speedMbps: network.speedMbps ?? 0,
+      rxMbps: network.rxMbps ?? 0,
+      txMbps: network.txMbps ?? 0,
+      rxBytes: network.rxBytes ?? 0,
+      txBytes: network.txBytes ?? 0,
+    });
 
     } catch (error) {
       if (mounted) {
@@ -124,7 +126,7 @@ export function NetworkPage() {
             <Total label="Interfaces actives" value={`${upIfaces.length}/${live.network.length}`} tone="text-ink-100" />
             <Total
               label="Vitesse cumulée"
-              value={`${upIfaces.reduce((a, n) => a + (n.speedGbps ?? 0), 0)} Gbps`}
+              value={`${upIfaces.reduce((a, n) => a + (n.speedMbps ?? 0), 0)} Mbps`}
               tone="text-ink-100"
             />
           </div>
@@ -185,7 +187,7 @@ export function NetworkPage() {
                   </td>
 
                   <td className="px-4 py-3 text-right font-mono text-ink-200">
-                    {n.speedGbps ?? 0} Gbps
+                    {n.speedMbps ?? 0} Mbps
                   </td>
 
                   <td className="px-4 py-3 text-right font-mono text-brand-300">

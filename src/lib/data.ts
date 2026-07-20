@@ -33,6 +33,7 @@ export interface Network {
   ip: string;
   mac: string;
   status: 'up' | 'down';
+  speedMbps: number;
   rxMbps: number;
   txMbps: number;
   rxBytes: number;
