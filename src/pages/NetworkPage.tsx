@@ -5,68 +5,48 @@ import { Sparkline } from '../components/Charts';
 import { getNetworkSnapshot } from '../lib/apiService';
 import { useEffect, useState } from 'react';
 
+type NetworkInterface = {
+  name: string;
+  ip: string;
+  mac: string;
+  status: 'up' | 'down';
+  speedMbps: number;
+  rxMbps: number;
+  txMbps: number;
+  rxBytes: number;
+  txBytes: number;
+};
+
 export function NetworkPage() {
   const live = useLiveData();
-  const refresh = 1500;
-
-  const [networkInfo, setNetworkInfo] = useState({
-    name: live.network?.[0]?.name ?? '',
-    ip: live.network?.[0]?.ip ?? '',
-    mac: live.network?.[0]?.mac ?? '',
-    status: live.network?.[0]?.status ?? 'down',
-    speedMbps: live.network?.[0]?.speedMbps ?? 0,
-    rxMbps: live.network?.[0]?.rxMbps ?? 0,
-    txMbps: live.network?.[0]?.txMbps ?? 0,
-    rxBytes: live.network?.[0]?.rxBytes ?? 0,
-    txBytes: live.network?.[0]?.txBytes ?? 0,
-  });
-
-  const upIfaces = live.network.filter((n) => n.status === 'up');
+  const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
-    let mounted = true;
 
-  const loadNetworkInfo = async () => {
-    try {
-      const snapshot = await getNetworkSnapshot(controller.signal);
+    const loadNetwork = async () => {
+      try {
+        const snapshot = await getNetworkSnapshot(controller.signal);
 
-      if (!mounted || !snapshot) return;
-
-      const network = Array.isArray(snapshot)
-        ? snapshot.find((n) => n.status === 'up' && n.name !== 'lo') ?? snapshot[0]
-        : snapshot;
-
-
-    setNetworkInfo({
-      name: network.name ?? '',
-      ip: network.ip ?? '',
-      mac: network.mac ?? '',
-      status: network.status ?? 'down',
-      speedMbps: network.speedMbps ?? 0,
-      rxMbps: network.rxMbps ?? 0,
-      txMbps: network.txMbps ?? 0,
-      rxBytes: network.rxBytes ?? 0,
-      txBytes: network.txBytes ?? 0,
-    });
-
-    } catch (error) {
-      if (mounted) {
-        console.error('Erreur réseau:', error);
+        if (Array.isArray(snapshot)) {
+          setInterfaces(snapshot);
+        }
+      } catch (error) {
+        console.error('Erreur chargement interfaces réseau:', error);
       }
-    }
-  };
+    };
 
-  void loadNetworkInfo();
+    void loadNetwork();
 
-    const timer = window.setInterval(loadNetworkInfo, refresh);
+    const timer = window.setInterval(loadNetwork, 3000);
 
     return () => {
-      mounted = false;
       controller.abort();
-      window.clearInterval(timer);
+      clearInterval(timer);
     };
   }, []);
+
+  const upIfaces = interfaces.filter((n) => n.status === 'up');
 
   return (
     <div className="space-y-5">
@@ -82,13 +62,9 @@ export function NetworkPage() {
               </p>
             </div>
 
-            <div className="flex items-center gap-4 text-xs">
-              <span className="flex items-center gap-1.5 text-brand-300">
-                <span className="dot bg-brand-500" /> Reçu
-              </span>
-              <span className="flex items-center gap-1.5 text-accent-400">
-                <span className="dot bg-accent-500" /> Émis
-              </span>
+            <div className="flex gap-4 text-xs">
+              <span className="text-brand-300">● Reçu</span>
+              <span className="text-accent-400">● Émis</span>
             </div>
           </div>
 
@@ -100,7 +76,13 @@ export function NetworkPage() {
                   {fmtMbps(live.sys.netRxMbps)}
                 </span>
               </div>
-              <Sparkline data={live.netRxHistory} color="#10b981" height={64} max={650} />
+
+              <Sparkline
+                data={live.netRxHistory}
+                color="#10b981"
+                height={64}
+                max={650}
+              />
             </div>
 
             <div>
@@ -110,7 +92,13 @@ export function NetworkPage() {
                   {fmtMbps(live.sys.netTxMbps)}
                 </span>
               </div>
-              <Sparkline data={live.netTxHistory} color="#0ea5e9" height={64} max={350} />
+
+              <Sparkline
+                data={live.netTxHistory}
+                color="#0ea5e9"
+                height={64}
+                max={350}
+              />
             </div>
           </div>
         </div>
@@ -121,12 +109,27 @@ export function NetworkPage() {
           </h2>
 
           <div className="mt-4 space-y-3">
-            <Total label="Total reçu" value={`${live.sys.netRxTotalGB} GB`} tone="text-brand-300" />
-            <Total label="Total émis" value={`${live.sys.netTxTotalGB} GB`} tone="text-accent-400" />
-            <Total label="Interfaces actives" value={`${upIfaces.length}/${live.network.length}`} tone="text-ink-100" />
+            <Total
+              label="Total reçu"
+              value={`${live.sys.netRxTotalGB} GB`}
+              tone="text-brand-300"
+            />
+
+            <Total
+              label="Total émis"
+              value={`${live.sys.netTxTotalGB} GB`}
+              tone="text-accent-400"
+            />
+
+            <Total
+              label="Interfaces actives"
+              value={`${upIfaces.length}/${interfaces.length}`}
+              tone="text-ink-100"
+            />
+
             <Total
               label="Vitesse cumulée"
-              value={`${upIfaces.reduce((a, n) => a + (n.speedMbps ?? 0), 0)} Mbps`}
+              value={`${upIfaces.reduce((a, n) => a + n.speedMbps, 0)} Mbps`}
               tone="text-ink-100"
             />
           </div>
@@ -143,59 +146,43 @@ export function NetworkPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-ink-700/60 bg-ink-850/40 text-left text-xs uppercase tracking-wider text-ink-400">
+              <tr className="border-b border-ink-700/60 bg-ink-850/40 text-left text-xs uppercase text-ink-400">
                 <th className="px-4 py-3">Interface</th>
-                <th className="px-4 py-3">Adresse IP</th>
+                <th className="px-4 py-3">IP</th>
                 <th className="px-4 py-3">MAC</th>
-                <th className="px-4 py-3">État</th>
+                <th className="px-4 py-3">Etat</th>
                 <th className="px-4 py-3 text-right">Vitesse</th>
-                <th className="px-4 py-3 text-right">↓ Reçu</th>
-                <th className="px-4 py-3 text-right">↑ Émis</th>
+                <th className="px-4 py-3 text-right">Reçu</th>
+                <th className="px-4 py-3 text-right">Emis</th>
               </tr>
             </thead>
 
             <tbody>
-              {live.network.map((n) => (
-                <tr key={n.name} className="border-b border-ink-800/60 table-row-hover">
+              {interfaces.map((n) => (
+                <tr key={n.name} className="border-b border-ink-800/60">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <span className={`grid h-8 w-8 place-items-center rounded-lg ${
-                        n.status === 'up'
-                          ? 'bg-brand-500/10 text-brand-300'
-                          : 'bg-ink-800 text-ink-400'
-                      }`}>
-                        {n.status === 'up' ? <Wifi size={15} /> : <WifiOff size={15} />}
-                      </span>
+                      {n.status === 'up' ? (
+                        <Wifi size={15} />
+                      ) : (
+                        <WifiOff size={15} />
+                      )}
 
-                      <span className="font-mono text-ink-100">
-                        {n.name}
-                      </span>
+                      <span className="font-mono">{n.name}</span>
                     </div>
                   </td>
 
-                  <td className="px-4 py-3 font-mono text-ink-200">{n.ip}</td>
-                  <td className="px-4 py-3 font-mono text-[11px] text-ink-400">{n.mac}</td>
-
-                  <td className="px-4 py-3">
-                    <span className={`chip ring-1 ring-inset ${
-                      n.status === 'up'
-                        ? 'bg-brand-500/10 text-brand-300 ring-brand-500/30'
-                        : 'bg-ink-700/60 text-ink-300 ring-ink-600'
-                    }`}>
-                      {n.status === 'up' ? 'UP' : 'DOWN'}
-                    </span>
+                  <td className="px-4 py-3 font-mono">{n.ip}</td>
+                  <td className="px-4 py-3 font-mono text-xs">{n.mac}</td>
+                  <td className="px-4 py-3">{n.status.toUpperCase()}</td>
+                  <td className="px-4 py-3 text-right">
+                    {n.speedMbps} Mbps
                   </td>
-
-                  <td className="px-4 py-3 text-right font-mono text-ink-200">
-                    {n.speedMbps ?? 0} Mbps
+                  <td className="px-4 py-3 text-right text-brand-300">
+                    {fmtMbps(n.rxMbps)}
                   </td>
-
-                  <td className="px-4 py-3 text-right font-mono text-brand-300">
-                    {n.status === 'up' ? fmtMbps(n.rxMbps) : '—'}
-                  </td>
-
-                  <td className="px-4 py-3 text-right font-mono text-accent-400">
-                    {n.status === 'up' ? fmtMbps(n.txMbps) : '—'}
+                  <td className="px-4 py-3 text-right text-accent-400">
+                    {fmtMbps(n.txMbps)}
                   </td>
                 </tr>
               ))}
@@ -207,20 +194,7 @@ export function NetworkPage() {
       <div className="card card-pad">
         <div className="flex items-center gap-2 text-sm font-semibold text-white">
           <NetworkIcon size={16} className="text-brand-300" />
-          Connexions actives (échantillon)
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-2 font-mono text-xs sm:grid-cols-2">
-          {[
-            'tcp  10.0.42.10:22   → 10.0.42.51:51824 ESTAB',
-            'tcp  10.0.42.10:443  → 198.51.100.7:44012 ESTAB',
-            'tcp  10.0.42.10:5432 → 127.0.0.1:39812 ESTAB',
-            'tcp6 :::80           → 203.0.113.45:51402 TIME_WAIT',
-          ].map((c, i) => (
-            <div key={i} className="rounded-lg border border-ink-700/50 bg-ink-850/40 px-3 py-2 text-ink-200">
-              {c}
-            </div>
-          ))}
+          Connexions actives
         </div>
       </div>
     </div>
@@ -237,11 +211,9 @@ function Total({
   tone: string;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-ink-700/50 bg-ink-850/40 px-3 py-2.5">
-      <span className="text-sm text-ink-300">{label}</span>
-      <span className={`font-mono text-sm font-semibold ${tone}`}>
-        {value}
-      </span>
+    <div className="flex justify-between rounded-lg border border-ink-700/50 bg-ink-850/40 px-3 py-2.5">
+      <span className="text-ink-300">{label}</span>
+      <span className={`font-mono font-semibold ${tone}`}>{value}</span>
     </div>
   );
 }
