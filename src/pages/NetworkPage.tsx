@@ -26,30 +26,36 @@ export function NetworkPage() {
     const controller = new AbortController();
     let mounted = true;
 
-    const loadNetworkInfo = async () => {
-      try {
-        const snapshot = await getNetworkSnapshot(controller.signal);
+  const loadNetworkInfo = async () => {
+    try {
+      const snapshot = await getNetworkSnapshot(controller.signal);
 
-        if (!mounted || !snapshot) return;
+      if (!mounted || !snapshot) return;
 
-        setNetworkInfo({
-          name: snapshot.name ?? '',
-          ip: snapshot.ip ?? '',
-          mac: snapshot.mac ?? '',
-          status: snapshot.status ?? 'down',
-          rxMbps: snapshot.rxMbps ?? 0,
-          txMbps: snapshot.txMbps ?? 0,
-          rxBytes: snapshot.rxBytes ?? 0,
-          txBytes: snapshot.txBytes ?? 0,
-        });
-      } catch (error) {
-        if (mounted) {
-          console.error('Erreur réseau:', error);
-        }
+      const network = Array.isArray(snapshot)
+        ? snapshot.find((n) => n.status === 'up' && n.name !== 'lo') ?? snapshot[0]
+        : snapshot;
+
+
+      setNetworkInfo({
+        name: network.name ?? '',
+        ip: network.ip ?? '',
+        mac: network.mac ?? '',
+        status: network.status ?? 'down',
+        rxMbps: network.rxMbps ?? 0,
+        txMbps: network.txMbps ?? 0,
+        rxBytes: network.rxBytes ?? 0,
+        txBytes: network.txBytes ?? 0,
+      });
+
+    } catch (error) {
+      if (mounted) {
+        console.error('Erreur réseau:', error);
       }
-    };
+    }
+  };
 
-    void loadNetworkInfo();
+  void loadNetworkInfo();
 
     const timer = window.setInterval(loadNetworkInfo, refresh);
 
