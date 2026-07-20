@@ -10,7 +10,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { getCpuSnapshot, getInformationSnapshot, getMemorySnapshot } from '../lib/apiService';
+import { getCpuSnapshot, getMemorySnapshot } from '../lib/apiService';
 import type { Route } from '../lib/router';
 import { useLiveData } from '../lib/live';
 import { pct, usageTone } from '../lib/format';
