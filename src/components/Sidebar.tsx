@@ -48,7 +48,7 @@ export function Sidebar({ route, navigate }: SidebarProps) {
       try {
         const snapshot = await getCpuSnapshot(controller.signal);
         if (mounted) setCpuPct(snapshot.usage);
-        setNamePct(snapshot.name);
+        setNamePct(snapshot.host);
       } catch {
         if (mounted) setCpuPct(fallbackCpuPct);
       }
