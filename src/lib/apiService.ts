@@ -18,6 +18,17 @@ export type CpuSnapshot = {
   tempCpu: number;
 };
 
+export type NetworkSnapshot = {
+  name: string;
+  ip: string;
+  mac: string;
+  status: 'up' | 'down';
+  rxMbps: number;
+  txMbps: number;
+  rxBytes: number;
+  txBytes: number;
+};
+
 export type InformationSnapshot = {
   time: string;
 }
@@ -66,6 +77,14 @@ function isDiskSnapshot(value: unknown): value is DiskSnapshot {
   const candidate = value as Record<string, unknown>;
   return ['totalGb', 'usedGb', 'freeGb', 'usage'].every((key) => typeof candidate[key] === 'number');
 }
+
+function isNetworkSnapshot(value: unknown): value is NetworkSnapshot {
+  if (!value || typeof value !== 'object') return false;
+
+  const candidate = value as Record<string, unknown>;
+  return ['name', 'ip', 'mac', 'status', 'rxMbps', 'txMbps', 'rxBytes', 'txBytes'].every((key) => typeof candidate[key] === 'number');
+}
+
 
 function isCpuSnapshot(value: unknown): value is CpuSnapshot {
   if (!value || typeof value !== 'object') return false;
@@ -185,6 +204,16 @@ export async function getDiskSnapshot(signal?: AbortSignal): Promise<DiskSnapsho
   const data = await fetchJson<unknown>('/disk', signal);
 
   if (!isDiskSnapshot(data)) {
+    throw new Error('Réponse API invalide');
+  }
+
+  return data;
+}
+
+export async function getNetworkSnapshot(signal?: AbortSignal): Promise<NetworkSnapshot> {
+  const data = await fetchJson<unknown>('/network', signal);
+
+  if (!isNetworkSnapshot(data)) {
     throw new Error('Réponse API invalide');
   }
 

@@ -55,7 +55,6 @@ export function DashboardPage() {
   const [kernel, setKernel] = useState(live.sys.kernel);
   const [cpuTemp, setCpuTemp] = useState(live.sys.tempCpu);
   const [uptime, setUptime] = useState(live.informations[0]?.time);
-  const [cpuCharge, setCpuCharge] = useState(live.sys.load[0]);
   const [servicesSnapshot, setServicesSnapshot] = useState<ServicesSnapshot | null>(null);
   const [fallbackServices] = useState(() => toFallbackServices(live.services));
   const [cpuHistory, setCpuHistory] = useState<number[]>(() => live.cpuHistory.slice(-48));

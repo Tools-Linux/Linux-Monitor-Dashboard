@@ -28,14 +28,15 @@ export interface Disk {
   health: 'ok' | 'warn' | 'critical';
 }
 
-export interface NetIface {
+export interface Network {
   name: string;
   ip: string;
   mac: string;
+  status: 'up' | 'down';
   rxMbps: number;
   txMbps: number;
-  status: 'up' | 'down';
-  speedGbps: number;
+  rxBytes: number;
+  txBytes: number;
 }
 
 export interface Process {
@@ -107,7 +108,7 @@ const SERVICE_DEFS: Array<Omit<Service, 'cpu' | 'memMB' | 'pid' | 'uptime'>> = [
 
 const DISK_DEFS: Array<Omit<Disk, 'usedGB' | 'tempC' | 'readMBps' | 'writeMBps'>> = [];
 
-const IFACE_DEFS: Array<Omit<NetIface, 'rxMbps' | 'txMbps'>> = [];
+const IFACE_DEFS: Array<Omit<Network, 'rxMbps' | 'txMbps'>> = [];
 
 const PROCESS_DEFS: Array<Omit<Process, 'cpu' | 'memMB' | 'state'>> = [];
 
@@ -205,7 +206,7 @@ export function makeDisks(): Disk[] {
   });
 }
 
-export function makeIfaces(): NetIface[] {
+export function makeIfaces(): Network[] {
   return IFACE_DEFS.map((n) => ({
     ...n,
     rxMbps: n.status === 'up' ? rand(5, 600) : 0,
