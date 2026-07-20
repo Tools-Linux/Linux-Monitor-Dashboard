@@ -153,7 +153,7 @@ export function makeSystemInfo(partial: Partial<SystemInfo>): SystemInfo {
     os: '',
     kernel: '',
     arch: '',
-    load: [],
+    load: [0, 0, 0],
     cpuModel: '',
     cores: 0,
     cpuCores: [],
