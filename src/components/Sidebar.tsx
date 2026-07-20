@@ -10,7 +10,7 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { getCpuSnapshot, getMemorySnapshot } from '../lib/apiService';
+import { getCpuSnapshot, getDiskSnapshot, getMemorySnapshot } from '../lib/apiService';
 import type { Route } from '../lib/router';
 import { useLiveData } from '../lib/live';
 import { pct, usageTone } from '../lib/format';
@@ -32,50 +32,78 @@ const NAV: Array<{ id: Route; label: string; icon: React.ReactNode }> = [
 
 export function Sidebar({ route, navigate }: SidebarProps) {
   const live = useLiveData();
-  const [fallbackCpuPct] = useState(() => live.cpuHistory[live.cpuHistory.length - 1]);
+  const [fallbackCpuPct] = useState(() => live.cpuHistory[live.cpuHistory.length - 1] ?? 0);
   const [cpuPct, setCpuPct] = useState(fallbackCpuPct);
-  const [fallbackMemPct] = useState(() => pct(live.sys.memUsedGB, live.sys.memTotalGB));
-  const [memPct, setMemPct] = useState(fallbackMemPct);
-  const [namePct, setNamePct] = useState(live.sys.hostname);
-  const cpuTone = usageTone(cpuPct).bar;
-  const memTone = usageTone(memPct).bar;
+  const [memPct, setMemPct] = useState(
+    pct(live.sys.memUsedGB, live.sys.memTotalGB)
+  );
+
+  const [hostname, setHostname] = useState(live.sys.hostname);
+
+  const [diskSnapshot, setDiskSnapshot] = useState(() => {
+    const totalGb = live.disks.reduce((sum, d) => sum + d.sizeGB, 0);
+    const usedGb = live.disks.reduce((sum, d) => sum + d.usedGB, 0);
+
+    return {
+      totalGb,
+      usedGb,
+      freeGb: totalGb - usedGb,
+      usage: pct(usedGb, totalGb),
+      disks: live.disks,
+    };
+  });
 
   useEffect(() => {
     const controller = new AbortController();
-    let mounted = true;
+    let active = true;
 
-    const loadCpu = async () => {
+    async function refresh() {
       try {
-        const snapshot = await getCpuSnapshot(controller.signal);
-        if (mounted) setCpuPct(snapshot.usage);
-        setNamePct(snapshot.host);
-      } catch {
-        if (mounted) setCpuPct(fallbackCpuPct);
-      }
-    };
+        const [cpu, memory, disk] = await Promise.all([
+          getCpuSnapshot(controller.signal),
+          getMemorySnapshot(controller.signal),
+          getDiskSnapshot(controller.signal),
+        ]);
 
-    const loadMemory = async () => {
-      try {
-        const snapshot = await getMemorySnapshot(controller.signal);
-        if (mounted) setMemPct(snapshot.usage);
-      } catch {
-        if (mounted) setMemPct(fallbackMemPct);
-      }
-    };
+        if (!active) return;
 
-    void loadCpu();
-    void loadMemory();
-    const refreshId = window.setInterval(() => {
-      void loadCpu();
-      void loadMemory();
-    }, 5000);
+        setCpuPct(cpu.usage);
+        setHostname(cpu.host);
+        setMemPct(memory.usage);
+        setDiskSnapshot(disk);
+      } catch {
+        // garde les dernières valeurs
+      }
+    }
+
+    void refresh();
+
+    const timer = window.setInterval(refresh, 5000);
 
     return () => {
-      mounted = false;
+      active = false;
       controller.abort();
-      window.clearInterval(refreshId);
+      window.clearInterval(timer);
     };
   }, []);
+
+  const widgets = [
+    {
+      name: 'CPU',
+      icon: Cpu,
+      value: cpuPct,
+    },
+    {
+      name: 'RAM',
+      icon: Activity,
+      value: memPct,
+    },
+    {
+      name: 'DISK',
+      icon: HardDrive,
+      value: diskSnapshot.usage,
+    },
+  ];
 
   return (
     <aside className="hidden w-64 shrink-0 flex-col border-r border-ink-700/60 bg-ink-900/50 p-4 md:flex">
@@ -83,9 +111,14 @@ export function Sidebar({ route, navigate }: SidebarProps) {
         <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand-500/10 ring-1 ring-inset ring-brand-500/30">
           <Terminal className="text-brand-300" size={20} />
         </div>
+
         <div>
-          <p className="text-sm font-semibold text-white">Linux-Monitor</p>
-          <p className="text-[11px] text-ink-400">{namePct}</p>
+          <p className="text-sm font-semibold text-white">
+            Linux-Monitor
+          </p>
+          <p className="text-[11px] text-ink-400">
+            {hostname}
+          </p>
         </div>
       </div>
 
@@ -103,29 +136,35 @@ export function Sidebar({ route, navigate }: SidebarProps) {
       </nav>
 
       <div className="mt-auto space-y-3">
-        <div className="card p-3">
-          <div className="flex items-center justify-between text-xs">
-            <span className="flex items-center gap-1.5 text-ink-300">
-              <Cpu size={12} /> CPU
-            </span>
-            <span className="font-mono text-ink-100">{cpuPct}%</span>
-          </div>
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink-700">
-            <div className={`h-full rounded-full ${cpuTone} transition-all`} style={{ width: `${cpuPct}%` }} />
-          </div>
-        </div>
-        <div className="card p-3">
-          <div className="flex items-center justify-between text-xs">
-            <span className="flex items-center gap-1.5 text-ink-300">
-              <HardDrive size={12} /> RAM
-            </span>
-            <span className="font-mono text-ink-100">{memPct}%</span>
-          </div>
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink-700">
-            <div className={`h-full rounded-full ${memTone} transition-all`} style={{ width: `${memPct}%` }} />
-          </div>
-        </div>
-        <p className="px-2 text-[10px] text-ink-500">Linux-Monitor v1.0 · mock data</p>
+        {widgets.map(({ name, icon: Icon, value }) => {
+          const tone = usageTone(value).bar;
+
+          return (
+            <div className="card p-3" key={name}>
+              <div className="flex items-center justify-between text-xs">
+                <span className="flex items-center gap-1.5 text-ink-300">
+                  <Icon size={12} />
+                  {name}
+                </span>
+
+                <span className="font-mono text-ink-100">
+                  {value}%
+                </span>
+              </div>
+
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink-700">
+                <div
+                  className={`h-full rounded-full ${tone} transition-all`}
+                  style={{ width: `${value}%` }}
+                />
+              </div>
+            </div>
+          );
+        })}
+
+        <p className="px-2 text-[10px] text-ink-500">
+          Linux-Monitor v1.0
+        </p>
       </div>
     </aside>
   );
