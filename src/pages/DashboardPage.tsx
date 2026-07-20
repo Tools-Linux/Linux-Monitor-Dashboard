@@ -308,7 +308,7 @@ export function DashboardPage() {
             <Sensor
               icon={<Power size={16} />}
               label="Disques sains"
-              value={`${live.disks.filter((d) => d.health === 'ok').length}/${live.disks.length}`}
+              value={`${diskSnapshot.disks.filter((d) => d.health === 'ok').length}/${diskSnapshot.disks.length}`}
               tone="text-brand-300"
             />
             <Sensor
