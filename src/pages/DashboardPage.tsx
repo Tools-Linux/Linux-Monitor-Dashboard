@@ -94,11 +94,12 @@ export function DashboardPage() {
     const controller = new AbortController();
     let mounted = true;
 
-    const connection = new signalR.HubConnectionBuilder()
-    .withUrl("http://192.168.1.39:5000/ws/network")
+  const connection = new signalR.HubConnectionBuilder()
+    .withUrl("http://192.168.1.39:5000/ws/network", {
+      withCredentials: true
+    })
     .withAutomaticReconnect()
     .build();
-
 
   connection.on("network", (data) => {
     setNetwork(data);
