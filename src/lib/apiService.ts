@@ -321,3 +321,5 @@ export async function getLogsSnapshot(signal?: AbortSignal): Promise<LogsSnapsho
 
   return payload;
 }
+
+export const dashboardSocket = new WebSocket("ws://192.168.1.130:5000/ws/dashboard");

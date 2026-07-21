@@ -9,10 +9,9 @@ import {
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import * as signalR from '@microsoft/signalr';
-import { getCpuSnapshot, getDiskSnapshot, getMemorySnapshot, getServicesSnapshot, type ServiceItem, type ServicesSnapshot } from '../lib/apiService';
+import { type ServiceItem, type ServicesSnapshot } from '../lib/apiService';
 import { useLiveData } from '../lib/live';
-import { fmtBytes, fmtMbps, pct, usageTone } from '../lib/format';
+import { fmtBytes, pct, usageTone } from '../lib/format';
 import { Ring, Sparkline } from '../components/Charts';
 import { StatTile } from '../components/StatTile';
 
@@ -27,6 +26,8 @@ const diskHealthMeta: Record<string, { cls: string; text: string }> = {
   warn: { cls: 'bg-warn-500/10 text-warn-300 ring-warn-500/30', text: 'Attention' },
   critical: { cls: 'bg-err-500/10 text-err-300 ring-err-500/30', text: 'Critique' },
 };
+
+const WS_URL = "ws://192.168.1.130:5000/ws/dashboard";
 
 function describeServiceState(state: string) {
   return serviceStateMeta[state] ?? { label: state, cls: 'bg-ink-700/60 text-ink-300 ring-ink-600', dot: 'bg-ink-500' };
@@ -91,128 +92,144 @@ export function DashboardPage() {
   const swapPct = pct(live.sys.swapUsedGB, live.sys.swapTotalGB);
 
   useEffect(() => {
-    const controller = new AbortController();
-    let mounted = true;
 
-  const connection = new signalR.HubConnectionBuilder()
-    .withUrl("http://192.168.1.39:5000/ws/network", {
-      withCredentials: true
-    })
-    .withAutomaticReconnect()
-    .build();
+  const socket = new WebSocket(WS_URL);
 
-  connection.on("network", (data) => {
-    setNetwork(data);
-  });
+  socket.onopen = () => {
+    console.log("Dashboard WebSocket connecté");
+  };
 
 
-  connection.start()
-    .then(() => console.log("Network websocket connecté"))
-    .catch(err => console.error("WS erreur", err));
+  socket.onmessage = (event) => {
 
-    const loadCpu = async () => {
-      try {
-        const snapshot = await getCpuSnapshot(controller.signal);
-        if (!mounted) return;
+    const message = JSON.parse(event.data);
+
+    switch(message.type)
+    {
+
+      case "cpu":
+      {
+        const snapshot = message.data;
 
         setCpuPct(snapshot.usage);
         setCpuCharge(snapshot.charge);
+
         setCpuName(snapshot.name);
-        setCpuCore(snapshot.core);
+        setCpuCore(String(snapshot.core));
         setCpuArch(snapshot.arch);
+
         setCpuThreads(snapshot.threads);
         setCpuProcessorCount(snapshot.processes);
+
         setHostname(snapshot.host);
         setKernel(snapshot.kernel);
         setOsname(snapshot.os);
+
         setCpuTemp(snapshot.tempCpu);
-        setUptime(live.informations[0]?.time);
-        setCpuHistory((prev) => [...prev.slice(1), snapshot.usage]);
-        setCpuUpdatedAt(new Date().toLocaleTimeString());
-      } catch {
-        if (mounted) {
-          setCpuCharge([]);
-          setCpuName(live.sys.cpuModel);
-          setCpuPct(fallbackCpuPct);
-          setCpuCore(String(live.sys.cores));
-          setCpuArch(live.sys.arch);
-          setCpuProcessorCount(live.sys.processes);
-          setCpuThreads(live.sys.threads);
-          setHostname(live.sys.hostname);
-          setKernel(live.sys.kernel);
-          setOsname(live.sys.os);
-          setCpuTemp(live.sys.tempCpu);
-          setUptime(live.informations[0]?.time);
-        }
+
+        setCpuHistory(prev => [
+          ...prev.slice(-47),
+          snapshot.usage
+        ]);
+
+        setCpuUpdatedAt(
+          new Date().toLocaleTimeString()
+        );
+
+        break;
       }
-    };
 
-    const loadServices = async () => {
-      try {
-        const snapshot = await getServicesSnapshot(controller.signal);
-        if (!mounted) return;
 
-        setServicesSnapshot(snapshot);
-      } catch {
-        if (mounted) setServicesSnapshot(null);
-      }
-    };
-
-    void loadCpu();
-    void loadServices();
-    const refreshId = window.setInterval(() => {
-      void loadCpu();
-    }, 5000);
-
-    const servicesRefreshId = window.setInterval(() => {
-      void loadServices();
-    }, 15000);
-
-    const loadDisk = async () => {
-      try {
-        const snapshot = await getDiskSnapshot(controller.signal);
-        if (!mounted) return;
-
-        setDiskSnapshot(snapshot);
-        setDiskUpdatedAt(new Date().toLocaleTimeString());
-      } catch {
-        if (mounted) setDiskSnapshot(fallbackDisk);
-      }
-    };
-
-    void loadDisk();
-    const diskRefreshId = window.setInterval(() => {
-      void loadDisk();
-    }, 5000);
-
-    const loadMemory = async () => {
-      try {
-        const snapshot = await getMemorySnapshot(controller.signal);
-        if (!mounted) return;
+      case "memory":
+      {
+        const snapshot = message.data;
 
         setMemPct(snapshot.usage);
-        setMemHistory((prev) => [...prev.slice(1), snapshot.usage]);
-        setMemUpdatedAt(new Date().toLocaleTimeString());
-      } catch {
-        if (mounted) setMemPct(fallbackMemPct);
+
+        setMemHistory(prev => [
+          ...prev.slice(-47),
+          snapshot.usage
+        ]);
+
+        setMemUpdatedAt(
+          new Date().toLocaleTimeString()
+        );
+
+        break;
       }
-    };
 
-    void loadMemory();
-    const memoryRefreshId = window.setInterval(() => {
-      void loadMemory();
-    }, 5000);
 
-    return () => {
-      mounted = false;
-      controller.abort();
-      window.clearInterval(refreshId);
-      window.clearInterval(servicesRefreshId);
-      window.clearInterval(diskRefreshId);
-      window.clearInterval(memoryRefreshId);
-      connection.stop();
-    };
-  }, [fallbackCpuPct]);
+      case "disk":
+      {
+        setDiskSnapshot(message.data);
+
+        setDiskUpdatedAt(
+          new Date().toLocaleTimeString()
+        );
+
+        break;
+      }
+
+
+      case "network":
+      {
+        setNetwork(message.data);
+
+        break;
+      }
+
+
+      case "services":
+      {
+        setServicesSnapshot(message.data);
+
+        break;
+      }
+
+
+      case "information":
+      {
+        setUptime(message.data.time);
+
+        break;
+      }
+
+
+      case "logs":
+      {
+        console.log("Logs reçus :", message.data);
+
+        break;
+      }
+
+    }
+
+  };
+
+
+  socket.onerror = (error) => {
+    console.error(
+      "Erreur WebSocket",
+      error
+    );
+  };
+
+
+  socket.onclose = () => {
+    console.log(
+      "Dashboard WebSocket fermé"
+    );
+  };
+
+
+  return () => {
+
+    socket.close();
+
+  };
+
+
+}, []);
 
   return (
     <div className="space-y-6">
