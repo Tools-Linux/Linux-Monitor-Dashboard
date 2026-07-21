@@ -104,6 +104,10 @@ export function DashboardPage() {
 
     const message = JSON.parse(event.data);
 
+      console.log("WS DATA :", event.data);
+
+
+  console.log("WS JSON :", message);
     switch(message.type)
     {
 
