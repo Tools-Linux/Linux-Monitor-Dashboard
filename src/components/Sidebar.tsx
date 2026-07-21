@@ -10,7 +10,6 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { getCpuSnapshot, getDiskSnapshot, getMemorySnapshot } from '../lib/apiService';
 import type { Route } from '../lib/router';
 import { useLiveData } from '../lib/live';
 import { pct, usageTone } from '../lib/format';
@@ -54,38 +53,79 @@ export function Sidebar({ route, navigate }: SidebarProps) {
   });
 
   useEffect(() => {
-    const controller = new AbortController();
-    let active = true;
 
-    async function refresh() {
-      try {
-        const [cpu, memory, disk] = await Promise.all([
-          getCpuSnapshot(controller.signal),
-          getMemorySnapshot(controller.signal),
-          getDiskSnapshot(controller.signal),
-        ]);
+  const socket = new WebSocket(
+    "ws://192.168.1.130:5000/ws/dashboard"
+  );
 
-        if (!active) return;
+
+  socket.onopen = () => {
+    console.log("Sidebar WebSocket connecté");
+  };
+
+
+  socket.onmessage = (event) => {
+
+    const message = JSON.parse(event.data);
+
+
+    switch(message.type)
+    {
+
+      case "cpu":
+      {
+        const cpu = message.data;
 
         setCpuPct(cpu.usage);
         setHostname(cpu.host);
-        setMemPct(memory.usage);
-        setDiskSnapshot(disk);
-      } catch {
-        // garde les dernières valeurs
+
+        break;
       }
+
+
+      case "memory":
+      {
+        const memory = message.data;
+
+        setMemPct(memory.usage);
+
+        break;
+      }
+
+
+      case "disk":
+      {
+        setDiskSnapshot(message.data);
+
+        break;
+      }
+
     }
 
-    void refresh();
+  };
 
-    const timer = window.setInterval(refresh, 5000);
 
-    return () => {
-      active = false;
-      controller.abort();
-      window.clearInterval(timer);
-    };
-  }, []);
+  socket.onerror = (error) => {
+    console.error(
+      "Sidebar WebSocket erreur",
+      error
+    );
+  };
+
+
+  socket.onclose = () => {
+    console.log(
+      "Sidebar WebSocket fermé"
+    );
+  };
+
+
+  return () => {
+    socket.close();
+  };
+
+
+}, []);
 
   const widgets = [
     {
