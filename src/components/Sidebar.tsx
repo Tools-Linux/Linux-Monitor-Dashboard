@@ -64,45 +64,17 @@ export function Sidebar({ route, navigate }: SidebarProps) {
   };
 
 
-  socket.onmessage = (event) => {
-
+    socket.onmessage = (event) => {
     const message = JSON.parse(event.data);
 
+    console.log("WS JSON :", message);
 
-    switch(message.type)
+    if(message.type === "memory")
     {
-
-      case "cpu":
-      {
-        const cpu = message.data;
-
-        setCpuPct(cpu.usage);
-        setHostname(cpu.host);
-
-        break;
-      }
-
-
-      case "memory":
-      {
-        const memory = message.data;
-
-        setMemPct(memory.usage);
-
-        break;
-      }
-
-
-      case "disk":
-      {
-        setDiskSnapshot(message.data);
-
-        break;
-      }
-
+        setMemPct(message.data.Usage);
     }
-
   };
+
 
 
   socket.onerror = (error) => {
