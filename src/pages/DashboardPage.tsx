@@ -99,116 +99,16 @@ export function DashboardPage() {
     console.log("Dashboard WebSocket connecté");
   };
 
-
   socket.onmessage = (event) => {
-
     const message = JSON.parse(event.data);
 
-      console.log("WS DATA :", event.data);
+    console.log("WS JSON :", message);
 
-
-  console.log("WS JSON :", message);
-    switch(message.type)
+    if(message.type === "memory")
     {
-
-      case "cpu":
-      {
-        const snapshot = message.data;
-
-        setCpuPct(snapshot.usage);
-        setCpuCharge(snapshot.charge);
-
-        setCpuName(snapshot.name);
-        setCpuCore(String(snapshot.core));
-        setCpuArch(snapshot.arch);
-
-        setCpuThreads(snapshot.threads);
-        setCpuProcessorCount(snapshot.processes);
-
-        setHostname(snapshot.host);
-        setKernel(snapshot.kernel);
-        setOsname(snapshot.os);
-
-        setCpuTemp(snapshot.tempCpu);
-
-        setCpuHistory(prev => [
-          ...prev.slice(-47),
-          snapshot.usage
-        ]);
-
-        setCpuUpdatedAt(
-          new Date().toLocaleTimeString()
-        );
-
-        break;
-      }
-
-
-      case "memory":
-      {
-        const snapshot = message.data;
-
-        setMemPct(snapshot.usage);
-
-        setMemHistory(prev => [
-          ...prev.slice(-47),
-          snapshot.usage
-        ]);
-
-        setMemUpdatedAt(
-          new Date().toLocaleTimeString()
-        );
-
-        break;
-      }
-
-
-      case "disk":
-      {
-        setDiskSnapshot(message.data);
-
-        setDiskUpdatedAt(
-          new Date().toLocaleTimeString()
-        );
-
-        break;
-      }
-
-
-      case "network":
-      {
-        setNetwork(message.data);
-
-        break;
-      }
-
-
-      case "services":
-      {
-        setServicesSnapshot(message.data);
-
-        break;
-      }
-
-
-      case "information":
-      {
-        setUptime(message.data.time);
-
-        break;
-      }
-
-
-      case "logs":
-      {
-        console.log("Logs reçus :", message.data);
-
-        break;
-      }
-
+        setMemPct(message.data.Usage);
     }
-
-  };
+};
 
 
   socket.onerror = (error) => {
