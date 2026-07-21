@@ -104,9 +104,13 @@ export function DashboardPage() {
 
     console.log("WS JSON :", message);
 
-    if(message.type === "memory")
-    {
+    switch(message.type){
+      case "cpu":
+        setCpuPct(message.data.Usage);
+        break;
+      case "memory":
         setMemPct(message.data.Usage);
+        break;
     }
 };
 
