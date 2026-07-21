@@ -301,8 +301,14 @@ export function DashboardPage() {
             <Sensor
               icon={<Thermometer size={16} />}
               label="Temp. CPU"
-              value={`${cpuTemp.toFixed(0)}°C`}
-              tone={cpuTemp > 70 ? 'text-err-400' : 'text-brand-300'}
+              value={cpuTemp == null ? "N/A" : `${cpuTemp.toFixed(0)}°C`}
+              tone={
+                cpuTemp == null
+                  ? "text-ink-400"
+                  : cpuTemp > 70
+                    ? "text-err-400"
+                    : "text-brand-300"
+              }
             />
             <Sensor icon={<Zap size={16} />} label="Consommation" value={`${live.sys.powerWatts.toFixed(0)} W`} tone="text-warn-400" />
             <Sensor
