@@ -9,6 +9,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import * as signalR from '@microsoft/signalr';
 import { getCpuSnapshot, getDiskSnapshot, getMemorySnapshot, getServicesSnapshot, type ServiceItem, type ServicesSnapshot } from '../lib/apiService';
 import { useLiveData } from '../lib/live';
 import { fmtBytes, fmtMbps, pct, usageTone } from '../lib/format';
@@ -49,6 +50,7 @@ function summarizeServices(snapshot: ServicesSnapshot | null, fallback: ServiceI
 
 export function DashboardPage() {
   const live = useLiveData();
+  const [network, setNetwork] = useState<any[]>([]);
   const [fallbackCpuPct] = useState(() => live.cpuHistory[live.cpuHistory.length - 1] ?? 0);
   const [cpuCharge, setCpuCharge] = useState<Array<{core:string; usage:number}>>(() => []);
   const [cpuPct, setCpuPct] = useState(fallbackCpuPct);
@@ -91,6 +93,21 @@ export function DashboardPage() {
   useEffect(() => {
     const controller = new AbortController();
     let mounted = true;
+
+    const connection = new signalR.HubConnectionBuilder()
+    .withUrl("http://192.168.1.39:5000/ws/network")
+    .withAutomaticReconnect()
+    .build();
+
+
+  connection.on("network", (data) => {
+    setNetwork(data);
+  });
+
+
+  connection.start()
+    .then(() => console.log("Network websocket connecté"))
+    .catch(err => console.error("WS erreur", err));
 
     const loadCpu = async () => {
       try {
@@ -192,6 +209,7 @@ export function DashboardPage() {
       window.clearInterval(servicesRefreshId);
       window.clearInterval(diskRefreshId);
       window.clearInterval(memoryRefreshId);
+      connection.stop();
     };
   }, [fallbackCpuPct]);
 
@@ -221,13 +239,21 @@ export function DashboardPage() {
           icon={<HardDrive size={18} />}
           accent="bg-warn-500"
         />
-        <StatTile
-          label="Réseau"
-          value={fmtMbps(live.sys.netRxMbps)}
-          sub={`↑ ${fmtMbps(live.sys.netTxMbps)} · total ↓ ${live.sys.netRxTotalGB} GB`}
-          icon={<Network size={18} />}
-          accent="bg-accent-500"
-        />
+      <StatTile
+        label="Réseau"
+        value={
+          network.length > 0
+            ? `${network[0].rxMbps.toFixed(2)} Mbps`
+            : "0 Mbps"
+        }
+        sub={
+          network.length > 0
+            ? `↑ ${network[0].txMbps.toFixed(2)} Mbps · ↓ ${network[0].rxTotalGB} GB`
+            : "WebSocket en attente..."
+        }
+        icon={<Network size={18} />}
+        accent="bg-accent-500"
+      />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
