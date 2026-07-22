@@ -106,6 +106,7 @@ export function DashboardPage() {
         const cpu = message.cpu;
         const disk = message.disk;
         const uptime = message.information;
+        const network = message.network;
 
         if (memory) {
           setMemPct(memory.Usage ?? memory.usage);
@@ -113,6 +114,10 @@ export function DashboardPage() {
 
         if(uptime){
           setUptime(uptime.time);
+        }
+
+        if(network){
+          setNetwork(network);
         }
 
         if (cpu) {
