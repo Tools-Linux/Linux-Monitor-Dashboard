@@ -68,7 +68,6 @@ export function DashboardPage() {
   const [servicesSnapshot, setServicesSnapshot] = useState<ServicesSnapshot | null>(null);
   const [fallbackServices] = useState(() => toFallbackServices(live.services));
   const [cpuHistory, setCpuHistory] = useState<number[]>(() => live.cpuHistory.slice(-48));
-  const [cpuUpdatedAt, setCpuUpdatedAt] = useState<string | null>(null);
 
   const [fallbackDisk] = useState(() => {
     const totalGb = live.disks.reduce((a, d) => a + d.sizeGB, 0);
@@ -100,72 +99,61 @@ export function DashboardPage() {
   };
 
 
-socket.onmessage = (event) => {
-  const message = JSON.parse(event.data);
+socket.onmessage=(event)=>{
+  const message=JSON.parse(event.data);
+  console.log("WS JSON :",message);
 
-  console.log("WS JSON :", message);
+  if(message.type==="dashboard"){
+    const memory=message.memory;
+    const cpu=message.cpu;
+    const disk=message.disk;
 
-  if(message.type === "dashboard") {
+    if(memory){
+      setMemPct(memory.Usage??memory.usage);
+    }
 
-    const memory = message.memory;
-    const cpu = message.cpu;
+    if(cpu){
+      setCpuPct(cpu.usage??cpu.Usage);
+      setCpuName(cpu.name??cpu.Name);
+      setCpuCore(cpu.core??cpu.Core);
+      setCpuArch(cpu.arch??cpu.Arch);
+      setCpuProcessorCount(cpu.processes??cpu.Processes);
+      setCpuThreads(cpu.threads??cpu.Threads);
+      setHostname(cpu.host??cpu.Host);
+      setOsname(cpu.os??cpu.Os);
+      setKernel(cpu.kernel??cpu.Kernel);
+      setCpuTemp(cpu.tempCpu??cpu.TempCpu);
 
-    setMemPct(memory.Usage);
+      const charges=cpu.charge??cpu.Charge??[];
 
-    setCpuPct(cpu.usage ?? cpu.Usage);
+      setCpuCharge(
+        charges.map((c:any)=>({
+          core:c.core??c.Core,
+          usage:c.usage??c.Usage
+        }))
+      );
 
-    setCpuName(cpu.name ?? cpu.Name);
-    setCpuCore(cpu.core ?? cpu.Core);
-    setCpuArch(cpu.arch ?? cpu.Arch);
+      setCpuHistory(prev=>[
+        ...prev.slice(-47),
+        cpu.usage??cpu.Usage
+      ]);
+    }
 
-    setCpuProcessorCount(cpu.processes ?? cpu.Processes);
-    setCpuThreads(cpu.threads ?? cpu.Threads);
+    if(disk){
+      setDiskSnapshot({
+        totalGb:disk.totalGb??disk.TotalGb??0,
+        usedGb:disk.usedGb??disk.UsedGb??0,
+        freeGb:disk.freeGb??disk.FreeGb??0,
+        usage:disk.usage??disk.Usage??0,
+        disks:disk.disks??disk.Disks??[]
+      });
 
-    setHostname(cpu.host ?? cpu.Host);
-    setOsname(cpu.os ?? cpu.Os);
-
-    setKernel(cpu.kernel ?? cpu.Kernel);
-    setCpuTemp(cpu.tempCpu ?? cpu.TempCpu);
-
-
-    const charges = cpu.charge ?? cpu.Charge ?? [];
-
-    setCpuCharge(
-      charges.map((c:any)=>({
-        core: c.core ?? c.Core,
-        usage: c.usage ?? c.Usage
-      }))
-    );
-
-
-    setCpuHistory(prev => [
-      ...prev.slice(-47),
-      cpu.usage ?? cpu.Usage
-    ]);
+      setDiskUpdatedAt(
+        new Date().toLocaleTimeString()
+      );
+    }
   }
 };
-
-
-  socket.onerror = (error) => {
-    console.error(
-      "Erreur WebSocket",
-      error
-    );
-  };
-
-
-  socket.onclose = () => {
-    console.log(
-      "Dashboard WebSocket fermé"
-    );
-  };
-
-
-  return () => {
-
-    socket.close();
-
-  };
 
 
 }, []);
@@ -236,9 +224,6 @@ socket.onmessage = (event) => {
                 <span className="font-mono text-brand-300">{cpuPct.toFixed(2)}%</span>
               </div>
               <Sparkline data={cpuHistory} color="#10b981" height={56} max={100} />
-              <p className="mt-2 text-[11px] text-ink-500">
-                Dernière API : {cpuUpdatedAt ?? 'en attente...'}
-              </p>
             </div>
             <div>
               <div className="mb-1 flex justify-between text-xs text-ink-300">
