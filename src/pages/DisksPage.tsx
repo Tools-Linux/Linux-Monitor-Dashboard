@@ -1,9 +1,9 @@
 import { HardDrive, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
-import { type DiskSnapshot } from "../lib/apiService";
+import { type DiskSnapshot, WS_BASE_URL } from "../lib/apiService";
 import { fmtBytes, pct, usageTone } from "../lib/format";
 
-const WS_URL = "ws://192.168.1.130:5000/ws/dashboard";
+const WS_URL = `${WS_BASE_URL}/dashboard`;
 
 export function DisksPage() {
   const [disk, setDisk] = useState<DiskSnapshot | null>(null);

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLiveData } from '../lib/live';
+import { WS_BASE_URL } from '../lib/apiService';
 
 type SortKey = 'cpu' | 'memMB' | 'pid';
 
@@ -8,7 +9,7 @@ type Service = {
   state: string;
 };
 
-const WS_URL = "ws://192.168.1.130:5000/ws/services";
+const WS_URL = `${WS_BASE_URL}/services`;
 
 const stateMeta: Record<string, string> = {
   R: 'text-brand-300',

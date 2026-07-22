@@ -81,6 +81,8 @@ export type LogsSnapshot = {
 
 const API_BASE_URL = 'http://192.168.1.130:5000/api';
 
+export const WS_BASE_URL = 'ws://192.168.1.130:5000/ws';
+
 function isDiskSnapshot(value: unknown): value is DiskSnapshot {
   if (!value || typeof value !== 'object') return false;
 

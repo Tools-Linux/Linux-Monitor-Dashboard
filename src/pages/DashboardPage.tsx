@@ -9,7 +9,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { type ServiceItem, type ServicesSnapshot } from '../lib/apiService';
+import { type ServiceItem, type ServicesSnapshot, WS_BASE_URL } from '../lib/apiService';
 import { useLiveData } from '../lib/live';
 import { fmtBytes, pct, usageTone } from '../lib/format';
 import { Ring, Sparkline } from '../components/Charts';
@@ -27,7 +27,7 @@ const diskHealthMeta: Record<string, { cls: string; text: string }> = {
   critical: { cls: 'bg-err-500/10 text-err-300 ring-err-500/30', text: 'Critique' },
 };
 
-const WS_URL = "ws://192.168.1.130:5000/ws/dashboard";
+const WS_URL = `${WS_BASE_URL}/dashboard`;
 
 function describeServiceState(state: string) {
   return serviceStateMeta[state] ?? { label: state, cls: 'bg-ink-700/60 text-ink-300 ring-ink-600', dot: 'bg-ink-500' };

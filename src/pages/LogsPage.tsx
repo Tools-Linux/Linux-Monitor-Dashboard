@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Pause, Play, Trash2 } from 'lucide-react';
 import { useLiveData } from '../lib/live';
 import type { LogLevel } from '../lib/data';
+import { WS_BASE_URL } from '../lib/apiService';
 
-const WS_URL = "ws://192.168.1.130:5000/ws/logs";
+const WS_URL = `${WS_BASE_URL}/logs`;
 
 const levelMeta: Record<LogLevel,{cls:string;dot:string;label:string}> = {
   info:{cls:'text-brand-300',dot:'bg-brand-500',label:'INFO'},
