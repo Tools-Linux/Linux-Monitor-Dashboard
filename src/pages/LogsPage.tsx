@@ -72,6 +72,9 @@ export function LogsPage() {
   const [fallbackLogs] = useState<UiLogEntry[]>(() => mapFallbackLogs(live.logs));
   const scrollRef = useRef<HTMLDivElement>(null);
   const logsSource = apiLogs ?? fallbackLogs;
+  const socket = new WebSocket(
+    "ws://192.168.1.130:5000/ws/logs"
+);
 
   const logs = logsSource.filter((l) => {
     if (filter !== 'all' && l.level !== filter) return false;
@@ -79,40 +82,51 @@ export function LogsPage() {
     return true;
   });
 
-  useEffect(() => {
-    const controller = new AbortController();
-    let mounted = true;
+ socket.onmessage = (event) => {
 
-    const loadLogs = async () => {
-      if (paused) return;
+    const message = JSON.parse(event.data);
 
-      try {
-        const snapshot = await getLogsSnapshot(controller.signal);
-        if (!mounted) return;
 
-        setApiLogs(mapApiLogs(snapshot.logs));
-      } catch {
-        if (mounted) setApiLogs(null);
-      }
-    };
+    if(message.type === "log")
+    {
+        if(paused)
+            return;
 
-    void loadLogs();
-    const refreshId = window.setInterval(() => {
-      void loadLogs();
-    }, 5000);
 
-    return () => {
-      mounted = false;
-      controller.abort();
-      window.clearInterval(refreshId);
-    };
-  }, [paused]);
+        const log = message.data;
 
-  useEffect(() => {
-    if (!paused && scrollRef.current) {
-      scrollRef.current.scrollTop = 0;
+
+        const entry: UiLogEntry = {
+            id: crypto.randomUUID(),
+            time: extractTime(log.timestamp),
+            level: normalizeLevel(log.level),
+            unit: `${log.service} (pid:${log.pid})`,
+            message: log.message
+        };
+
+
+        setApiLogs(prev => [
+            entry,
+            ...(prev ?? [])
+        ].slice(0,500));
     }
-  }, [logs, paused]);
+};
+
+useEffect(() => {
+
+    async function load()
+    {
+        const data = await getLogsSnapshot();
+
+        setApiLogs(
+            mapApiLogs(data.logs)
+        );
+    }
+
+
+    load();
+
+}, []);
 
   return (
     <div className="space-y-4">
