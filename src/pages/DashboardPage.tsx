@@ -99,43 +99,49 @@ export function DashboardPage() {
     console.log("Dashboard WebSocket connecté");
   };
 
+
 socket.onmessage = (event) => {
   const message = JSON.parse(event.data);
 
   console.log("WS JSON :", message);
 
-  if(message.type === "dashboard")
-  {
-    const cpu = message.cpu;
+  if(message.type === "dashboard") {
+
     const memory = message.memory;
-
-    setCpuPct(cpu.usage);
-    setCpuName(cpu.name);
-    setCpuCore(cpu.core);
-    setCpuArch(cpu.arch);
-    setCpuProcessorCount(cpu.processes);
-    setCpuThreads(cpu.threads);
-    setHostname(cpu.host);
-    setOsname(cpu.os);
-    setKernel(cpu.kernel);
-    setCpuTemp(cpu.tempCpu);
-
-    setCpuCharge(cpu.charge ?? []);
+    const cpu = message.cpu;
 
     setMemPct(memory.Usage);
 
+    setCpuPct(cpu.usage ?? cpu.Usage);
+
+    setCpuName(cpu.name ?? cpu.Name);
+    setCpuCore(cpu.core ?? cpu.Core);
+    setCpuArch(cpu.arch ?? cpu.Arch);
+
+    setCpuProcessorCount(cpu.processes ?? cpu.Processes);
+    setCpuThreads(cpu.threads ?? cpu.Threads);
+
+    setHostname(cpu.host ?? cpu.Host);
+    setOsname(cpu.os ?? cpu.Os);
+
+    setKernel(cpu.kernel ?? cpu.Kernel);
+    setCpuTemp(cpu.tempCpu ?? cpu.TempCpu);
+
+
+    const charges = cpu.charge ?? cpu.Charge ?? [];
+
+    setCpuCharge(
+      charges.map((c:any)=>({
+        core: c.core ?? c.Core,
+        usage: c.usage ?? c.Usage
+      }))
+    );
+
+
     setCpuHistory(prev => [
-      ...prev.slice(1),
-      cpu.usage
+      ...prev.slice(-47),
+      cpu.usage ?? cpu.Usage
     ]);
-
-    setMemHistory(prev => [
-      ...prev.slice(1),
-      memory.Usage
-    ]);
-
-    setCpuUpdatedAt(new Date().toLocaleTimeString());
-    setMemUpdatedAt(new Date().toLocaleTimeString());
   }
 };
 
