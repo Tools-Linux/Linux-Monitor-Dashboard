@@ -99,19 +99,44 @@ export function DashboardPage() {
     console.log("Dashboard WebSocket connecté");
   };
 
-  socket.onmessage = (event) => {
-    const message = JSON.parse(event.data);
+socket.onmessage = (event) => {
+  const message = JSON.parse(event.data);
 
-    console.log("WS JSON :", message);
+  console.log("WS JSON :", message);
 
-    switch(message.type){
-      case "cpu":
-        setCpuPct(message.data.Usage);
-        break;
-      case "memory":
-        setMemPct(message.data.Usage);
-        break;
-    }
+  if(message.type === "dashboard")
+  {
+    const cpu = message.cpu;
+    const memory = message.memory;
+
+    setCpuPct(cpu.usage);
+    setCpuName(cpu.name);
+    setCpuCore(cpu.core);
+    setCpuArch(cpu.arch);
+    setCpuProcessorCount(cpu.processes);
+    setCpuThreads(cpu.threads);
+    setHostname(cpu.host);
+    setOsname(cpu.os);
+    setKernel(cpu.kernel);
+    setCpuTemp(cpu.tempCpu);
+
+    setCpuCharge(cpu.charge ?? []);
+
+    setMemPct(memory.Usage);
+
+    setCpuHistory(prev => [
+      ...prev.slice(1),
+      cpu.usage
+    ]);
+
+    setMemHistory(prev => [
+      ...prev.slice(1),
+      memory.Usage
+    ]);
+
+    setCpuUpdatedAt(new Date().toLocaleTimeString());
+    setMemUpdatedAt(new Date().toLocaleTimeString());
+  }
 };
 
 
