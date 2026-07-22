@@ -105,9 +105,14 @@ export function DashboardPage() {
         const memory = message.memory;
         const cpu = message.cpu;
         const disk = message.disk;
+        const uptime = message.information;
 
         if (memory) {
           setMemPct(memory.Usage ?? memory.usage);
+        }
+
+        if(uptime){
+          setUptime(uptime.time);
         }
 
         if (cpu) {
