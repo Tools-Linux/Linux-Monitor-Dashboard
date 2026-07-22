@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { type DiskSnapshot } from "../lib/apiService";
 import { fmtBytes, pct, usageTone } from "../lib/format";
 
-const WS_URL = "ws://localhost:5000/ws/dashboard";
+const WS_URL = "ws://192.168.1.130:5000/ws/dashboard";
 
 export function DisksPage() {
   const [disk, setDisk] = useState<DiskSnapshot | null>(null);
