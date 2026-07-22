@@ -124,12 +124,12 @@ socket.onmessage=(event)=>{
       setKernel(cpu.kernel??cpu.Kernel);
       setCpuTemp(cpu.tempCpu??cpu.TempCpu);
 
-      const charges=cpu.charge??cpu.Charge??[];
+      const charges = cpu.charge ?? cpu.Charge ?? [];
 
       setCpuCharge(
         charges.map((c:any)=>({
-          core:String(c.core??c.Core??"CPU"),
-          usage:Number(c.usage??c.Usage??0)
+          core:String(c.core ?? c.Core ?? "CPU"),
+          usage:Number(c.usage ?? c.Usage ?? 0)
         }))
       );
 
@@ -302,7 +302,7 @@ socket.onmessage=(event)=>{
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
           {cpuCharge.map((c) => {
-          const tone = usageTone(Number(c.usage??0));
+          const tone = usageTone(Number(c.usage ?? 0));
           return (
             <div
               key={c.core}
@@ -314,7 +314,7 @@ socket.onmessage=(event)=>{
                 </span>
 
                 <span className="font-mono text-ink-100">
-                  {Number(c.usage??0).toFixed(0)}%
+                  {Number(c.usage ?? 0).toFixed(0)}%
                 </span>
               </div>
 
