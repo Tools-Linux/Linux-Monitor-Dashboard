@@ -73,6 +73,28 @@ export function Sidebar({ route, navigate }: SidebarProps) {
 
     const memory = message.memory;
     const cpu = message.cpu;
+    const disk = message.disk;
+
+    if (disk) {
+        setDiskSnapshot({
+          totalGb: Number(disk.totalGb ?? disk.TotalGb ?? 0),
+          usedGb: Number(disk.usedGb ?? disk.UsedGb ?? 0),
+          freeGb: Number(disk.freeGb ?? disk.FreeGb ?? 0),
+          usage: Number(disk.usage ?? disk.Usage ?? 0),
+
+          disks: (disk.disks ?? disk.Disks ?? []).map((d: any) => ({
+            model: d.model ?? d.Model ?? "Unknown",
+            device: d.device ?? d.Device ?? "-",
+            fstype: d.fstype ?? d.Fstype ?? "-",
+            health: d.health ?? d.Health ?? "ok",
+            usedGB: Number(d.usedGB ?? d.UsedGB ?? d.usedGb ?? d.UsedGb ?? 0),
+            sizeGB: Number(d.sizeGB ?? d.SizeGB ?? d.sizeGb ?? d.SizeGb ?? 0),
+            tempC: Number(d.tempC ?? d.TempC ?? 0),
+            readMBps: Number(d.readMBps ?? d.ReadMBps ?? 0),
+            writeMBps: Number(d.writeMBps ?? d.WriteMBps ?? 0),
+          })),
+        });
+      }
 
     setMemPct(memory.Usage);
     setCpuPct(cpu.usage ?? cpu.Usage);
