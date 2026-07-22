@@ -3,7 +3,7 @@ import { Pause, Play, Trash2 } from 'lucide-react';
 import { useLiveData } from '../lib/live';
 import type { LogLevel } from '../lib/data';
 
-const WS_URL = "ws://192.168.1.130:5000/ws/dashboard";
+const WS_URL = "ws://192.168.1.130:5000/ws/logs";
 
 const levelMeta: Record<LogLevel,{cls:string;dot:string;label:string}> = {
   info:{cls:'text-brand-300',dot:'bg-brand-500',label:'INFO'},
@@ -82,7 +82,7 @@ export function LogsPage(){
 
       console.log("WS LOGS:",message);
 
-      if(message.type==="dashboard" && message.logs && !paused){
+      if(message.type==="logs" && message.logs && !paused){
 
       const formatted = message.logs.logs.map((log:any)=>({
         id: Date.now().toString() + Math.random().toString(36).substring(2),
