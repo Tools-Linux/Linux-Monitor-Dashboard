@@ -3,49 +3,53 @@ import { useEffect, useState } from "react";
 import { type DiskSnapshot } from "../lib/apiService";
 import { fmtBytes, pct, usageTone } from "../lib/format";
 
-const WS_URL = "ws://localhost:5000/ws/disk";
+const WS_URL = "ws://localhost:5000/ws/dashboard";
 
 export function DisksPage() {
   const [disk, setDisk] = useState<DiskSnapshot | null>(null);
   const [connected, setConnected] = useState(false);
 
-  useEffect(() => {
-    const socket = new WebSocket(WS_URL);
+useEffect(() => {
+  const socket = new WebSocket(WS_URL);
 
-    socket.onopen = () => {
-      console.log("WebSocket Disk connecté");
-      setConnected(true);
-    };
+  socket.onopen = () => {
+    console.log("Dashboard WebSocket connecté");
+  };
 
-    socket.onclose = () => {
-      console.log("WebSocket Disk déconnecté");
-      setConnected(false);
-    };
+  socket.onmessage = (event) => {
+    const message = JSON.parse(event.data);
 
-    socket.onerror = (err) => {
-      console.error(err);
-      setConnected(false);
-    };
+    if (message.type !== "dashboard") return;
 
-    socket.onmessage = (event) => {
-      const message = JSON.parse(event.data);
+    const disk = message.disk;
+    if (!disk) return;
 
-      console.log("WS Disk :", message);
+    setDisk({
+      totalGb: Number(disk.TotalGb ?? disk.totalGb ?? 0),
+      usedGb: Number(disk.UsedGb ?? disk.usedGb ?? 0),
+      freeGb: Number(disk.FreeGb ?? disk.freeGb ?? 0),
+      usage: Number(disk.Usage ?? disk.usage ?? 0),
 
-      // Si ton serveur envoie :
-      // { type:"disk", disk:{...} }
-      const data = message.disk ?? message;
+      disks: (disk.Disks ?? disk.disks ?? []).map((d: any) => ({
+        model: d.Model ?? d.model,
+        device: d.Device ?? d.device,
+        fstype: d.Fstype ?? d.fstype,
+        health: d.Health ?? d.health,
+        usedGB: Number(d.UsedGB ?? d.usedGB ?? 0),
+        sizeGB: Number(d.SizeGB ?? d.sizeGB ?? 0),
+        tempC: Number(d.TempC ?? d.tempC ?? 0),
+        readMBps: Number(d.ReadMBps ?? d.readMBps ?? 0),
+        writeMBps: Number(d.WriteMBps ?? d.writeMBps ?? 0),
+      })),
+    });
+  };
 
-      setDisk({
-        totalGb: Number(data.totalGb ?? data.TotalGb ?? 0),
-        usedGb: Number(data.usedGb ?? data.UsedGb ?? 0),
-        freeGb: Number(data.freeGb ?? data.FreeGb ?? 0),
-        usage: Number(data.usage ?? data.Usage ?? 0),
-      });
-    };
+  socket.onclose = () => {
+    console.log("Dashboard WebSocket fermé");
+  };
 
-    return () => socket.close();
-  }, []);
+  return () => socket.close();
+}, []);
 
   const totalGb = disk?.totalGb ?? 0;
   const usedGb = disk?.usedGb ?? 0;
