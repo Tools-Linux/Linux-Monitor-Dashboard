@@ -64,16 +64,21 @@ export function Sidebar({ route, navigate }: SidebarProps) {
   };
 
 
-    socket.onmessage = (event) => {
-    const message = JSON.parse(event.data);
+  socket.onmessage = (event) => {
+  const message = JSON.parse(event.data);
 
-    console.log("WS JSON :", message);
+  console.log("WS JSON :", message);
 
-    if(message.type === "memory")
-    {
-        setMemPct(message.data.Usage);
-    }
-  };
+  if(message.type === "dashboard") {
+
+    const memory = message.memory;
+    const cpu = message.cpu;
+
+    setMemPct(memory.Usage);
+    setCpuPct(cpu.usage ?? cpu.Usage);
+    setHostname(cpu.host ?? cpu.Host);
+  }
+};
 
 
 
