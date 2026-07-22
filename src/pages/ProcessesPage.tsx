@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLiveData } from '../lib/live';
 
 type SortKey = 'cpu' | 'memMB' | 'pid';
+
+const WS_URL = "ws://192.168.1.130:5000/ws/dashboard";
 
 const stateMeta: Record<string, string> = {
   R: 'text-brand-300',
@@ -11,182 +13,316 @@ const stateMeta: Record<string, string> = {
   T: 'text-ink-400',
 };
 
+
+type Service = {
+  name:string;
+  state:string;
+};
+
+
 export function ProcessesPage() {
+
   const live = useLiveData();
-  const [sort, setSort] = useState<SortKey>('cpu');
-  const [query, setQuery] = useState('');
+
+  const [sort,setSort] = useState<SortKey>('cpu');
+  const [query,setQuery] = useState('');
+
+  const [services,setServices] = useState<Service[]>([]);
+  const [serviceTotal,setServiceTotal] = useState(0);
+  const [serviceEnabled,setServiceEnabled] = useState(0);
+  const [serviceDisabled,setServiceDisabled] = useState(0);
+
+  useEffect(()=>{
+
+    const socket = new WebSocket(WS_URL);
+
+
+    socket.onopen=()=>{
+      console.log("WebSocket services connecté");
+    };
+
+
+    socket.onmessage=(event)=>{
+
+      const data = JSON.parse(event.data);
+
+      console.log("WS PROCESS PAGE :",data);
+
+
+      if(data.services){
+
+        const srv=data.services;
+
+
+        setServices(
+          srv.list ?? []
+        );
+
+
+        setServiceTotal(
+          srv.total ?? 0
+        );
+
+
+        setServiceEnabled(
+          srv.enabled ?? 0
+        );
+
+
+        setServiceDisabled(
+          srv.disabled ?? 0
+        );
+
+      }
+
+    };
+
+
+    return ()=>{
+      socket.close();
+    };
+
+
+  },[]);
+
+
+
+  /*
+      PROCESSUS
+  */
 
   const processes = live.processes ?? [];
 
-  const rows = [...processes]
-    .filter((p) =>
+
+  const rows=[...processes]
+    .filter((p)=>
       !query ||
       `${p.command} ${p.user} ${p.pid}`
-        .toLowerCase()
-        .includes(query.toLowerCase())
+      .toLowerCase()
+      .includes(query.toLowerCase())
     )
-    .sort((a, b) =>
-      Number(b[sort] ?? 0) - Number(a[sort] ?? 0)
+    .sort((a,b)=>
+      Number(b[sort]??0)-Number(a[sort]??0)
     );
 
-  const totalCpu = processes.reduce(
-    (a, p) => a + Number(p.cpu ?? 0),
+
+  const totalCpu=processes.reduce(
+    (a,p)=>a+Number(p.cpu??0),
     0
   );
 
-  const totalMem = processes.reduce(
-    (a, p) => a + Number(p.memMB ?? 0),
+
+  const totalMem=processes.reduce(
+    (a,p)=>a+Number(p.memMB??0),
     0
   );
 
-  return (
-    <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div className="card card-pad">
-          <p className="text-xs uppercase tracking-wider text-ink-400">
-            Processus
-          </p>
-          <p className="mt-1 text-2xl font-semibold text-white">
-            {live.sys.processes}
-          </p>
-        </div>
 
-        <div className="card card-pad">
-          <p className="text-xs uppercase tracking-wider text-ink-400">
-            Threads
-          </p>
-          <p className="mt-1 text-2xl font-semibold text-white">
-            {live.sys.threads}
-          </p>
-        </div>
 
-        <div className="card card-pad">
-          <p className="text-xs uppercase tracking-wider text-ink-400">
-            CPU (top)
-          </p>
-          <p className="mt-1 text-2xl font-semibold text-white">
-            {totalCpu.toFixed(0)}%
-          </p>
-        </div>
+return (
 
-        <div className="card card-pad">
-          <p className="text-xs uppercase tracking-wider text-ink-400">
-            Mémoire (top)
-          </p>
-          <p className="mt-1 text-2xl font-semibold text-white">
-            {(totalMem / 1024).toFixed(1)} GB
-          </p>
-        </div>
-      </div>
+<div className="space-y-3">
 
-      <div className="card overflow-hidden">
-        <div className="flex items-center justify-between border-b border-ink-700/60 px-4 py-3">
-          <h2 className="text-sm font-semibold text-white">
-            Processus actifs
-          </h2>
 
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Filtrer par commande, PID, utilisateur…"
-            className="input w-72 py-1.5"
-          />
-        </div>
+<div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-ink-700/60 bg-ink-850/40 text-left text-xs uppercase tracking-wider text-ink-400">
-                <th className="px-4 py-3 font-medium">PID</th>
-                <th className="px-4 py-3 font-medium">Utilisateur</th>
-                <th className="px-4 py-3 font-medium">Commande</th>
-                <th className="px-4 py-3 font-medium">État</th>
-                <SortHead label="CPU" k="cpu" sort={sort} setSort={setSort} />
-                <SortHead label="Mémoire" k="memMB" sort={sort} setSort={setSort} />
-                <th className="px-4 py-3 font-medium">Démarré</th>
-              </tr>
-            </thead>
 
-            <tbody>
-              {rows.map((p) => (
-                <tr
-                  key={p.pid}
-                  className="border-b border-ink-800/60 table-row-hover"
-                >
-                  <td className="px-4 py-2.5 font-mono text-ink-300">
-                    {p.pid}
-                  </td>
+<div className="card card-pad">
+<p className="text-xs text-ink-400">Processus</p>
+<p className="text-2xl text-white">
+{live.sys.processes}
+</p>
+</div>
 
-                  <td className="px-4 py-2.5 text-ink-200">
-                    {p.user}
-                  </td>
 
-                  <td className="px-4 py-2.5 font-mono text-ink-100 max-w-[360px] truncate">
-                    {p.command}
-                  </td>
+<div className="card card-pad">
+<p className="text-xs text-ink-400">Threads</p>
+<p className="text-2xl text-white">
+{live.sys.threads}
+</p>
+</div>
 
-                  <td
-                    className={`px-4 py-2.5 font-mono ${
-                      stateMeta[p.state] ?? 'text-ink-400'
-                    }`}
-                  >
-                    {p.state}
-                  </td>
 
-                  <td className="px-4 py-2.5 text-right font-mono text-ink-200">
-                    {Number(p.cpu ?? 0).toFixed(1)}%
-                  </td>
+<div className="card card-pad">
+<p className="text-xs text-ink-400">Services actifs</p>
+<p className="text-2xl text-white">
+{serviceEnabled}/{serviceTotal}
+</p>
+</div>
 
-                  <td className="px-4 py-2.5 text-right font-mono text-ink-200">
-                    {Number(p.memMB ?? 0).toFixed(1)} MB
-                  </td>
 
-                  <td className="px-4 py-2.5 font-mono text-[11px] text-ink-400">
-                    {p.started}
-                  </td>
-                </tr>
-              ))}
+<div className="card card-pad">
+<p className="text-xs text-ink-400">Services arrêtés</p>
+<p className="text-2xl text-white">
+{serviceDisabled}
+</p>
+</div>
 
-              {rows.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="px-4 py-6 text-center text-ink-400"
-                  >
-                    Aucun processus trouvé
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
+
+</div>
+
+
+
+<div className="card overflow-hidden">
+
+
+<div className="px-4 py-3 border-b border-ink-700">
+
+<h2 className="text-sm text-white">
+Services Linux
+</h2>
+
+</div>
+
+
+
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 p-3">
+
+
+{
+services.map((s)=>(
+
+
+<div
+key={s.name}
+className="rounded-lg border border-ink-700 bg-ink-850 px-3 py-2 flex justify-between"
+>
+
+
+<span className="font-mono text-sm text-ink-200 truncate">
+{s.name}
+</span>
+
+
+<span
+className={
+s.state==="enabled"
+?
+"text-brand-300"
+:
+"text-ink-400"
+}
+>
+{s.state}
+</span>
+
+
+</div>
+
+
+))
 }
 
-function SortHead({
-  label,
-  k,
-  sort,
-  setSort,
-}: {
-  label: string;
-  k: SortKey;
-  sort: SortKey;
-  setSort: (k: SortKey) => void;
-}) {
-  return (
-    <th className="px-4 py-3 text-right font-medium">
-      <button
-        onClick={() => setSort(k)}
-        className={`inline-flex items-center gap-1 ${
-          sort === k ? 'text-brand-300' : 'text-ink-400'
-        }`}
-      >
-        {label}
-        {sort === k && <span>↓</span>}
-      </button>
-    </th>
-  );
+
+</div>
+
+</div>
+
+
+
+
+
+<div className="card overflow-hidden">
+
+
+<div className="px-4 py-3 border-b border-ink-700 flex justify-between">
+
+<h2 className="text-sm text-white">
+Processus actifs
+</h2>
+
+
+<input
+value={query}
+onChange={(e)=>setQuery(e.target.value)}
+placeholder="Filtrer..."
+className="input w-60 py-1"
+/>
+
+
+</div>
+
+
+
+<table className="w-full text-sm">
+
+<thead>
+
+<tr className="text-xs text-ink-400 border-b border-ink-700">
+
+<th className="px-3 py-2">PID</th>
+<th>User</th>
+<th>Commande</th>
+<th>Etat</th>
+<th>CPU</th>
+<th>RAM</th>
+
+</tr>
+
+</thead>
+
+
+<tbody>
+
+
+{
+rows.map(p=>(
+
+
+<tr key={p.pid}
+className="border-b border-ink-800"
+>
+
+
+<td className="px-3 py-2">
+{p.pid}
+</td>
+
+
+<td>
+{p.user}
+</td>
+
+
+<td className="font-mono">
+{p.command}
+</td>
+
+
+<td className={stateMeta[p.state]}>
+{p.state}
+</td>
+
+
+<td>
+{Number(p.cpu??0).toFixed(1)}%
+</td>
+
+
+<td>
+{Number(p.memMB??0).toFixed(1)} MB
+</td>
+
+
+</tr>
+
+
+))
+}
+
+
+
+</tbody>
+
+</table>
+
+
+</div>
+
+
+</div>
+
+);
+
+
 }
