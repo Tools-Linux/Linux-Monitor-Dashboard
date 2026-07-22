@@ -128,8 +128,8 @@ socket.onmessage=(event)=>{
 
       setCpuCharge(
         charges.map((c:any)=>({
-          core:c.core??c.Core,
-          usage:c.usage??c.Usage
+          core:String(c.core??c.Core??"CPU"),
+          usage:Number(c.usage??c.Usage??0)
         }))
       );
 
@@ -163,7 +163,7 @@ socket.onmessage=(event)=>{
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
           label="Charge CPU"
-          value={`${cpuPct.toFixed(1)}%`}
+          value={`${Number(cpuPct??0).toFixed(1)}%`}
           sub={`${cpuName} · core ${cpuCore}`}
           icon={<Cpu size={18} />}
           accent="bg-brand-500"
@@ -221,14 +221,14 @@ socket.onmessage=(event)=>{
             <div>
               <div className="mb-1 flex justify-between text-xs text-ink-300">
                 <span>CPU</span>
-                <span className="font-mono text-brand-300">{cpuPct.toFixed(2)}%</span>
+                <span className="font-mono text-brand-300">{Number(cpuPct??0).toFixed(2)}%</span>
               </div>
               <Sparkline data={cpuHistory} color="#10b981" height={56} max={100} />
             </div>
             <div>
               <div className="mb-1 flex justify-between text-xs text-ink-300">
                 <span>RAM</span>
-                <span className="font-mono text-accent-400">{memPct.toFixed(2)}%</span>
+                <span className="font-mono text-accent-400">{Number(memPct??0).toFixed(2)}%</span>
               </div>
               <Sparkline data={memHistory} color="#0ea5e9" height={56} max={100} />
               <p className="mt-2 text-[11px] text-ink-500">Dernière API : {memUpdatedAt ?? 'en attente...'}</p>
@@ -302,7 +302,7 @@ socket.onmessage=(event)=>{
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
           {cpuCharge.map((c) => {
-          const tone = usageTone(c.usage);
+          const tone = usageTone(Number(c.usage??0));
           return (
             <div
               key={c.core}
@@ -314,7 +314,7 @@ socket.onmessage=(event)=>{
                 </span>
 
                 <span className="font-mono text-ink-100">
-                  {c.usage.toFixed(0)}%
+                  {Number(c.usage??0).toFixed(0)}%
                 </span>
               </div>
 
@@ -322,7 +322,7 @@ socket.onmessage=(event)=>{
                 <div
                   className={`h-full rounded-full ${tone.bar} transition-all`}
                   style={{
-                    width: `${Math.min(c.usage,100)}%`
+                    width: `${Math.min(Number(c.usage??0),100)}%`
                   }}
                 />
               </div>
