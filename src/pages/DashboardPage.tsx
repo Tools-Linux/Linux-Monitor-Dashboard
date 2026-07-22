@@ -91,79 +91,88 @@ export function DashboardPage() {
   const swapPct = pct(live.sys.swapUsedGB, live.sys.swapTotalGB);
 
   useEffect(() => {
+    const socket = new WebSocket(WS_URL);
 
-  const socket = new WebSocket(WS_URL);
+    socket.onopen = () => {
+      console.log("Dashboard WebSocket connecté");
+    };
 
-  socket.onopen = () => {
-    console.log("Dashboard WebSocket connecté");
-  };
+    socket.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      console.log("WS JSON :", message);
 
+      if (message.type === "dashboard") {
+        const memory = message.memory;
+        const cpu = message.cpu;
+        const disk = message.disk;
 
-socket.onmessage=(event)=>{
-  const message=JSON.parse(event.data);
-  console.log("WS JSON :",message);
+        if (memory) {
+          setMemPct(memory.Usage ?? memory.usage);
+        }
 
-  if(message.type==="dashboard"){
-    const memory=message.memory;
-    const cpu=message.cpu;
-    const disk=message.disk;
+        if (cpu) {
+          setCpuPct(cpu.usage ?? cpu.Usage);
+          setCpuName(cpu.name ?? cpu.Name);
+          setCpuCore(cpu.core ?? cpu.Core);
+          setCpuArch(cpu.arch ?? cpu.Arch);
+          setCpuProcessorCount(cpu.processes ?? cpu.Processes);
+          setCpuThreads(cpu.threads ?? cpu.Threads);
+          setHostname(cpu.host ?? cpu.Host);
+          setOsname(cpu.os ?? cpu.Os);
+          setKernel(cpu.kernel ?? cpu.Kernel);
+          setCpuTemp(cpu.tempCpu ?? cpu.TempCpu);
 
-    if(memory){
-      setMemPct(memory.Usage??memory.usage);
-    }
+          const charges = cpu.charge ?? cpu.Charge ?? [];
 
-    if(cpu){
-      setCpuPct(cpu.usage??cpu.Usage);
-      setCpuName(cpu.name??cpu.Name);
-      setCpuCore(cpu.core??cpu.Core);
-      setCpuArch(cpu.arch??cpu.Arch);
-      setCpuProcessorCount(cpu.processes??cpu.Processes);
-      setCpuThreads(cpu.threads??cpu.Threads);
-      setHostname(cpu.host??cpu.Host);
-      setOsname(cpu.os??cpu.Os);
-      setKernel(cpu.kernel??cpu.Kernel);
-      setCpuTemp(cpu.tempCpu??cpu.TempCpu);
+          setCpuCharge(
+            charges.map((c: any) => ({
+              core: String(c.core ?? c.Core ?? "CPU"),
+              usage: Number(c.usage ?? c.Usage ?? 0),
+            }))
+          );
 
-      const charges = cpu.charge ?? cpu.Charge ?? [];
+          setCpuHistory((prev) => [
+            ...prev.slice(-47),
+            cpu.usage ?? cpu.Usage,
+          ]);
+        }
 
-      setCpuCharge(
-        charges.map((c:any)=>({
-          core:String(c.core ?? c.Core ?? "CPU"),
-          usage:Number(c.usage ?? c.Usage ?? 0)
-        }))
-      );
+        if (disk) {
+          setDiskSnapshot({
+            totalGb: Number(disk.totalGb ?? disk.TotalGb ?? 0),
+            usedGb: Number(disk.usedGb ?? disk.UsedGb ?? 0),
+            freeGb: Number(disk.freeGb ?? disk.FreeGb ?? 0),
+            usage: Number(disk.usage ?? disk.Usage ?? 0),
 
-      setCpuHistory(prev=>[
-        ...prev.slice(-47),
-        cpu.usage??cpu.Usage
-      ]);
-    }
+            disks: (disk.disks ?? disk.Disks ?? []).map((d: any) => ({
+              model: d.model ?? d.Model ?? "Unknown",
+              device: d.device ?? d.Device ?? "-",
+              fstype: d.fstype ?? d.Fstype ?? "-",
+              health: d.health ?? d.Health ?? "ok",
+              usedGB: Number(d.usedGB ?? d.UsedGB ?? d.usedGb ?? d.UsedGb ?? 0),
+              sizeGB: Number(d.sizeGB ?? d.SizeGB ?? d.sizeGb ?? d.SizeGb ?? 0),
+              tempC: Number(d.tempC ?? d.TempC ?? 0),
+              readMBps: Number(d.readMBps ?? d.ReadMBps ?? 0),
+              writeMBps: Number(d.writeMBps ?? d.WriteMBps ?? 0),
+            })),
+          });
 
-    if(disk){
-      setDiskSnapshot({
-        totalGb:disk.totalGb??disk.TotalGb??0,
-        usedGb:disk.usedGb??disk.UsedGb??0,
-        freeGb:disk.freeGb??disk.FreeGb??0,
-        usage:disk.usage??disk.Usage??0,
-        disks:disk.disks??disk.Disks??[]
-      });
+          setDiskUpdatedAt(new Date().toLocaleTimeString());
+        }
+      }
+    };
 
-      setDiskUpdatedAt(
-        new Date().toLocaleTimeString()
-      );
-    }
-  }
-};
-
-
-}, []);
+    return () => {
+      socket.close();
+    };
+  }, []);
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
           label="Charge CPU"
-          value={`${Number(cpuPct??0).toFixed(1)}%`}
+          value={`${Number(cpuPct ?? 0).toFixed(1)}%`}
           sub={`${cpuName} · core ${cpuCore}`}
           icon={<Cpu size={18} />}
           accent="bg-brand-500"
@@ -184,21 +193,21 @@ socket.onmessage=(event)=>{
           icon={<HardDrive size={18} />}
           accent="bg-warn-500"
         />
-      <StatTile
-        label="Réseau"
-        value={
-          network.length > 0
-            ? `${network[0].rxMbps.toFixed(2)} Mbps`
-            : "0 Mbps"
-        }
-        sub={
-          network.length > 0
-            ? `↑ ${network[0].txMbps.toFixed(2)} Mbps · ↓ ${network[0].rxTotalGB} GB`
-            : "WebSocket en attente..."
-        }
-        icon={<Network size={18} />}
-        accent="bg-accent-500"
-      />
+        <StatTile
+          label="Réseau"
+          value={
+            network.length > 0
+              ? `${network[0].rxMbps.toFixed(2)} Mbps`
+              : "0 Mbps"
+          }
+          sub={
+            network.length > 0
+              ? `↑ ${network[0].txMbps.toFixed(2)} Mbps · ↓ ${network[0].rxTotalGB} GB`
+              : "WebSocket en attente..."
+          }
+          icon={<Network size={18} />}
+          accent="bg-accent-500"
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -221,14 +230,14 @@ socket.onmessage=(event)=>{
             <div>
               <div className="mb-1 flex justify-between text-xs text-ink-300">
                 <span>CPU</span>
-                <span className="font-mono text-brand-300">{Number(cpuPct??0).toFixed(2)}%</span>
+                <span className="font-mono text-brand-300">{Number(cpuPct ?? 0).toFixed(2)}%</span>
               </div>
               <Sparkline data={cpuHistory} color="#10b981" height={56} max={100} />
             </div>
             <div>
               <div className="mb-1 flex justify-between text-xs text-ink-300">
                 <span>RAM</span>
-                <span className="font-mono text-accent-400">{Number(memPct??0).toFixed(2)}%</span>
+                <span className="font-mono text-accent-400">{Number(memPct ?? 0).toFixed(2)}%</span>
               </div>
               <Sparkline data={memHistory} color="#0ea5e9" height={56} max={100} />
               <p className="mt-2 text-[11px] text-ink-500">Dernière API : {memUpdatedAt ?? 'en attente...'}</p>
@@ -302,37 +311,37 @@ socket.onmessage=(event)=>{
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
           {cpuCharge.map((c) => {
-          const tone = usageTone(Number(c.usage ?? 0));
-          return (
-            <div
-              key={c.core}
-              className="rounded-xl border border-ink-700/70 bg-ink-850/60 p-3"
-            >
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-ink-400">
-                  {c.core.toUpperCase()}
-                </span>
+            const tone = usageTone(Number(c.usage ?? 0));
+            return (
+              <div
+                key={c.core}
+                className="rounded-xl border border-ink-700/70 bg-ink-850/60 p-3"
+              >
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-ink-400">
+                    {c.core.toUpperCase()}
+                  </span>
 
-                <span className="font-mono text-ink-100">
-                  {Number(c.usage ?? 0).toFixed(0)}%
-                </span>
-              </div>
+                  <span className="font-mono text-ink-100">
+                    {Number(c.usage ?? 0).toFixed(0)}%
+                  </span>
+                </div>
 
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink-700">
-                <div
-                  className={`h-full rounded-full ${tone.bar} transition-all`}
-                  style={{
-                    width: `${Math.min(Number(c.usage??0),100)}%`
-                  }}
-                />
-              </div>
+                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-ink-700">
+                  <div
+                    className={`h-full rounded-full ${tone.bar} transition-all`}
+                    style={{
+                      width: `${Math.min(Number(c.usage ?? 0), 100)}%`
+                    }}
+                  />
+                </div>
 
-              <div className="mt-2 text-[10px] text-ink-400">
-                Charge API CPU
+                <div className="mt-2 text-[10px] text-ink-400">
+                  Charge API CPU
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
         </div>
       </div>
 
@@ -340,7 +349,7 @@ socket.onmessage=(event)=>{
         <div className="card card-pad">
           <h2 className="text-sm font-semibold text-white">Occupation & Performance des disques</h2>
           <div className="mt-4 space-y-4">
-            {diskSnapshot.disks?.map((d) => {
+            {diskSnapshot.disks.map((d) => {
               const p = pct(d.usedGB, d.sizeGB);
               const tone = usageTone(p);
               const health = diskHealthMeta[d.health] ?? { cls: 'bg-ink-700 text-ink-300 ring-ink-600', text: d.health };
