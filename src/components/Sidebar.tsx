@@ -12,8 +12,7 @@ import {
 import { useEffect, useState } from 'react';
 import type { Route } from '../lib/router';
 import { useLiveData } from '../lib/live';
-import { pct, usageTone } from '../lib/format';
-
+import { fmtBytes ,pct, usageTone } from '../lib/format';
 interface SidebarProps {
   route: Route;
   navigate: (r: Route) => void;
@@ -125,7 +124,6 @@ export function Sidebar({ route, navigate }: SidebarProps) {
 
 
 }, []);
-
   const widgets = [
     {
       name: 'CPU',
