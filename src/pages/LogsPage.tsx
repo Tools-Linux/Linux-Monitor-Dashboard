@@ -84,13 +84,13 @@ export function LogsPage(){
 
       if(message.type==="dashboard" && message.logs && !paused){
 
-        const formatted=message.logs.logs.map((log:any)=>({
-          id:crypto.randomUUID(),
-          time:extractTime(log.timestamp),
-          level:normalizeLevel(log.level),
-          unit:`${log.service} (pid:${log.pid})`,
-          message:log.message
-        }));
+      const formatted = message.logs.logs.map((log:any)=>({
+        id: Date.now().toString() + Math.random().toString(36).substring(2),
+        time: extractTime(log.timestamp),
+        level: normalizeLevel(log.level),
+        unit: `${log.service} (pid:${log.pid})`,
+        message: log.message
+      }));
 
         setLogs(formatted);
       }
