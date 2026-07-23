@@ -5,10 +5,13 @@ import { WS_BASE_URL } from '../lib/apiService';
 type SortKey = 'cpu' | 'memMB' | 'pid';
 
 type Service = {
-  name: string;
+  pid: number;
+  user: string;
+  command: string;
   state: string;
+  cpu: number;
+  memMB: number;
 };
-
 const WS_URL = `${WS_BASE_URL}/services`;
 
 const stateMeta: Record<string, string> = {
@@ -39,20 +42,20 @@ export function ProcessesPage() {
       console.log("Services WS connecté");
     };
 
-    socket.onmessage = (event) => {
+  socket.onmessage = (event) => {
 
-      const data = JSON.parse(event.data);
+    const data = JSON.parse(event.data);
+    console.log("SERVICES WS :", data);
 
-      console.log("SERVICES WS :", data);
+    if (data.type !== "services") return;
+    const list: Service[] = data.services ?? [];
+    setServices(list);
+    setServiceTotal(list.length);
 
-      if(data.type === "services")
-      {
-        setServices(data.services.list ?? []);
-        setServiceTotal(data.services.total ?? 0);
-        setServiceEnabled(data.services.enabled ?? 0);
-        setServiceDisabled(data.services.disabled ?? 0);
-      }
-    };
+    const running = list.filter(s => s.state === "R").length;
+    setServiceEnabled(running);
+    setServiceDisabled(list.length - running);
+  };
 
     socket.onerror = (err) => {
       console.error("Services WS erreur", err);
@@ -112,7 +115,7 @@ export function ProcessesPage() {
         <div className="card card-pad">
           <p className="text-xs text-ink-400">Services actifs</p>
           <p className="text-2xl text-white">
-            {serviceEnabled}/{serviceTotal}
+            {serviceEnabled} / {serviceTotal}
           </p>
         </div>
 
@@ -136,26 +139,36 @@ export function ProcessesPage() {
 
         <div className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3">
 
-          {services.map((service)=>(
+          {services.map((service) => (
 
-            <div
-              key={service.name}
-              className="flex justify-between rounded-lg border border-ink-700 bg-ink-850 px-3 py-2"
-            >
+        <div
+            key={service.pid}
+            className="flex justify-between rounded-lg border border-ink-700 bg-ink-850 px-3 py-2"
+        >
 
-              <span className="truncate font-mono text-sm text-ink-200">
-                {service.name}
-              </span>
+            <div className="flex flex-col">
 
-              <span className={
-                service.state === "enabled"
-                ? "text-brand-300"
-                : "text-ink-400"
-              }>
-                {service.state}
-              </span>
+                <span className="truncate font-mono text-sm text-ink-200">
+                    {service.command}
+                </span>
+
+                <span className="text-xs text-ink-500">
+                    PID {service.pid} • {service.user}
+                </span>
 
             </div>
+
+            <span
+                className={
+                    service.state === "R"
+                        ? "text-brand-300"
+                        : "text-ink-400"
+                }
+            >
+                {service.state}
+            </span>
+
+        </div>
 
           ))}
 
