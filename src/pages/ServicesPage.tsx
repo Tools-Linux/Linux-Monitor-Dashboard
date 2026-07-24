@@ -9,12 +9,40 @@ import {
 const WS_URL = `${WS_BASE_URL}/services`;
 
 const stateMeta: Record<string, { label: string; cls: string; dot: string }> = {
-  enabled: { label: 'Activé', cls: 'bg-brand-500/10 text-brand-300 ring-brand-500/30', dot: 'bg-brand-500' },
-  disabled: { label: 'Désactivé', cls: 'bg-ink-700/60 text-ink-300 ring-ink-600', dot: 'bg-ink-400' },
-  static: { label: 'Statique', cls: 'bg-accent-500/10 text-accent-300 ring-accent-500/30', dot: 'bg-accent-500' },
+  active: {
+    label: "En cours",
+    cls: "bg-brand-500/10 text-brand-300 ring-brand-500/30",
+    dot: "bg-brand-500",
+  },
+  inactive: {
+    label: "Inactif",
+    cls: "bg-ink-700/60 text-ink-300 ring-ink-600",
+    dot: "bg-ink-400",
+  },
+  failed: {
+    label: "Échec",
+    cls: "bg-red-500/10 text-red-300 ring-red-500/30",
+    dot: "bg-red-500",
+  },
+  activating: {
+    label: "Démarrage",
+    cls: "bg-yellow-500/10 text-yellow-300 ring-yellow-500/30",
+    dot: "bg-yellow-500",
+  },
+  deactivating: {
+    label: "Arrêt",
+    cls: "bg-orange-500/10 text-orange-300 ring-orange-500/30",
+    dot: "bg-orange-500",
+  },
 };
+type Filter =
+  | "all"
+  | "active"
+  | "inactive"
+  | "failed"
+  | "activating"
+  | "deactivating";
 
-type Filter = 'all' | 'enabled' | 'disabled' | 'static';
 
 function describeState(state: string) {
   return stateMeta[state] ?? { label: state, cls: 'bg-ink-700/60 text-ink-300 ring-ink-600', dot: 'bg-ink-500' };
@@ -32,9 +60,11 @@ function summarizeServices(snapshot: ServicesSnapshot | null, fallback: ServiceI
 
   return {
     total: snapshot?.total ?? list.length,
-    enabled: snapshot?.enabled ?? list.filter((service) => service.state === 'enabled').length,
-    disabled: snapshot?.disabled ?? list.filter((service) => service.state === 'disabled').length,
-    static: list.filter((service) => service.state === 'static').length,
+    active: snapshot?.active ?? list.filter((service) => service.state === 'active').length,
+    inactive: snapshot?.inactive ?? list.filter((service) => service.state === 'inactive').length,
+    failed: snapshot?.failed ?? list.filter((service) => service.state === 'failed').length,
+    activating: snapshot?.activating ?? list.filter((service) => service.state === 'activating').length,
+    deactivating: snapshot?.deactivating ?? list.filter((service) => service.state === 'deactivating').length,
     list,
   };
 }
@@ -61,12 +91,15 @@ export function ServicesPage() {
 
     if (data.type !== "services") return;
 
-    const snapshot: ServicesSnapshot = {
-      total: data.services.length,
-      enabled: data.services.filter((s: ServiceItem) => s.state === "enabled").length,
-      disabled: data.services.filter((s: ServiceItem) => s.state === "disabled").length,
-      list: data.services,
-    };
+  const snapshot: ServicesSnapshot = {
+    total: data.services.length,
+    active: data.services.filter((s: ServiceItem) => s.state === "active").length,
+    inactive: data.services.filter((s: ServiceItem) => s.state === "inactive").length,
+    failed: data.services.filter((s: ServiceItem) => s.state === "failed").length,
+    activating: data.services.filter((s: ServiceItem) => s.state === "activating").length,
+    deactivating: data.services.filter((s: ServiceItem) => s.state === "deactivating").length,
+    list: data.services,
+  };
 
     setServicesSnapshot(snapshot);
   };
@@ -90,9 +123,11 @@ export function ServicesPage() {
 
   const counts = {
     all: serviceSummary.total,
-    enabled: serviceSummary.enabled,
-    disabled: serviceSummary.disabled,
-    static: serviceSummary.static,
+    active: serviceSummary.active,
+    inactive: serviceSummary.inactive,
+    failed: serviceSummary.failed,
+    activating: serviceSummary.activating,
+    deactivating: serviceSummary.deactivating,
   };
 
   return (
@@ -128,9 +163,9 @@ export function ServicesPage() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard label="Total" value={serviceSummary.total} />
-        <MetricCard label="Activés" value={serviceSummary.enabled} tone="text-brand-300" />
-        <MetricCard label="Désactivés" value={serviceSummary.disabled} tone="text-ink-300" />
-        <MetricCard label="Statiques" value={serviceSummary.static} tone="text-accent-300" />
+        <MetricCard label="Actifs" value={serviceSummary.active} tone="text-brand-300" />
+        <MetricCard label="Inactifs" value={serviceSummary.inactive} tone="text-ink-300" />
+        <MetricCard label="Échoués" value={serviceSummary.failed} tone="text-red-300" />
       </div>
 
       <div className="card overflow-hidden">
