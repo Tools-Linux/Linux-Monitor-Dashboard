@@ -62,11 +62,9 @@ export type ServiceItem = {
 
 export type ServicesSnapshot = {
   total: number;
-  active: number;
-  inactive: number;
-  failed: number;
-  activating: number;
-  deactivating: number;
+  enabled: number;
+  disabled: number;
+  static: number;
   list: ServiceItem[];
 };
 
