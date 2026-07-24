@@ -28,6 +28,7 @@ const diskHealthMeta: Record<string, { cls: string; text: string }> = {
 };
 
 const WS_URL = `${WS_BASE_URL}/dashboard`;
+const SERVICES_WS_URL = `${WS_BASE_URL}/services`;
 
 function describeServiceState(state: string) {
   return serviceStateMeta[state] ?? { label: state, cls: 'bg-ink-700/60 text-ink-300 ring-ink-600', dot: 'bg-ink-500' };
@@ -43,8 +44,8 @@ function toFallbackServices(services: Array<{ name: string; enabled: boolean }>)
 function summarizeServices(snapshot: ServicesSnapshot | null, fallback: ServiceItem[]) {
   const list = snapshot?.list ?? fallback;
   const total = snapshot?.total ?? list.length;
-  const enabled = snapshot?.enabled ?? list.filter((service) => service.state === 'enabled').length;
-  const disabled = snapshot?.disabled ?? list.filter((service) => service.state === 'disabled').length;
+  const enabled = snapshot?.active ?? list.filter((service) => service.state === 'enabled').length;
+  const disabled = snapshot?.inactive ?? list.filter((service) => service.state === 'disabled').length;
 
   return { total, enabled, disabled, list };
 }
@@ -176,6 +177,54 @@ export function DashboardPage() {
       socket.close();
     };
   }, []);
+
+  useEffect(() => {
+  const socket = new WebSocket(SERVICES_WS_URL);
+
+  socket.onopen = () => {
+    console.log("Services Dashboard WS connecté");
+  };
+
+  socket.onmessage = (event) => {
+    try {
+      const data = JSON.parse(event.data);
+
+      if (!data.services || !Array.isArray(data.services)) {
+        return;
+      }
+
+      const services = data.services.filter(
+        (s: ServiceItem) => s.name !== "*"
+      );
+
+      const snapshot: ServicesSnapshot = {
+        total: services.length,
+        active: services.filter(
+          (s: ServiceItem) => s.state === "active"
+        ).length,
+        inactive: services.filter(
+          (s: ServiceItem) => s.state === "inactive"
+        ).length,
+        failed: services.filter(
+          (s: ServiceItem) => s.state === "failed"
+        ).length,
+        list: services,
+      };
+
+      setServicesSnapshot(snapshot);
+
+    } catch (e) {
+      console.error("Erreur services dashboard", e);
+    }
+  };
+
+  socket.onerror = (err) => {
+    console.error("Services Dashboard WS erreur", err);
+  };
+
+  return () => socket.close();
+
+}, []);
 
   return (
     <div className="space-y-6">
@@ -400,10 +449,13 @@ export function DashboardPage() {
         <div className="card card-pad">
           <h2 className="text-sm font-semibold text-white">État des services</h2>
           <div className="mt-4 space-y-2">
-            {serviceSummary.list.slice(0, 6).map((service) => {
+            {serviceSummary.list
+              .filter((service) => service.state === "enabled")
+              .slice(0, 6)
+              .map((service, index) => {
               const m = describeServiceState(service.state);
               return (
-                <div key={service.name} className="flex items-center justify-between rounded-lg border border-ink-700/50 bg-ink-850/40 px-3 py-2.5">
+                <div key={`${service.name}-${index}`} className="flex items-center justify-between rounded-lg border border-ink-700/50 bg-ink-850/40 px-3 py-2.5">
                   <div className="flex items-center gap-3">
                     <span className={`dot ${m.dot}`} />
                     <div>
