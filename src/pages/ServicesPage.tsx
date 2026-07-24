@@ -181,10 +181,10 @@ export function ServicesPage() {
                 const meta = describeState(service.state);
 
                 return (
-                  <tr
-                      key={`${service.name}-${service.state}`}
-                      className="border-b border-ink-800/60 table-row-hover"
-                    >
+                      <tr
+                        key={`${service.name}-${service.state}-${index}`}
+                        className="border-b border-ink-800/60 table-row-hover"
+                      >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <span className={`dot ${meta.dot}`} />
