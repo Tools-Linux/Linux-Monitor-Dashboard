@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useLiveData } from '../lib/live';
-import { getServicesSnapshot, type ServiceItem, type ServicesSnapshot } from '../lib/apiService';
+import {
+  WS_BASE_URL,
+  type ServiceItem,
+  type ServicesSnapshot,
+} from '../lib/apiService';
+
+const WS_URL = `${WS_BASE_URL}/services`;
 
 const stateMeta: Record<string, { label: string; cls: string; dot: string }> = {
   enabled: { label: 'Activé', cls: 'bg-brand-500/10 text-brand-300 ring-brand-500/30', dot: 'bg-brand-500' },
@@ -40,32 +46,39 @@ export function ServicesPage() {
   const [servicesSnapshot, setServicesSnapshot] = useState<ServicesSnapshot | null>(null);
   const [fallbackServices] = useState(() => toFallbackServices(live.services));
 
+
   useEffect(() => {
-    const controller = new AbortController();
-    let mounted = true;
+  const socket = new WebSocket(WS_URL);
 
-    const loadServices = async () => {
-      try {
-        const snapshot = await getServicesSnapshot(controller.signal);
-        if (!mounted) return;
+  socket.onopen = () => {
+    console.log("Services WS connecté");
+  };
 
-        setServicesSnapshot(snapshot);
-      } catch {
-        if (mounted) setServicesSnapshot(null);
-      }
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    console.log("SERVICES WS :", data);
+
+    if (data.type !== "services") return;
+
+    const snapshot: ServicesSnapshot = {
+      total: data.services.length,
+      enabled: data.services.filter((s: ServiceItem) => s.state === "enabled").length,
+      disabled: data.services.filter((s: ServiceItem) => s.state === "disabled").length,
+      list: data.services,
     };
 
-    void loadServices();
-    const refreshId = window.setInterval(() => {
-      void loadServices();
-    }, 15000);
+    setServicesSnapshot(snapshot);
+  };
 
-    return () => {
-      mounted = false;
-      controller.abort();
-      window.clearInterval(refreshId);
-    };
-  }, [live.services]);
+  socket.onerror = (err) => {
+    console.error("Services WS erreur", err);
+  };
+
+  return () => {
+    socket.close();
+  };
+}, []);
 
   const serviceSummary = summarizeServices(servicesSnapshot, fallbackServices);
 
