@@ -9,31 +9,35 @@ import {
 const WS_URL = `${WS_BASE_URL}/services`;
 
 const stateMeta = {
-  enabled: {
-    label: "Activé",
+  active: {
+    label: "Actif",
     cls: "bg-brand-500/10 text-brand-300 ring-brand-500/30",
     dot: "bg-brand-500",
   },
-  disabled: {
-    label: "Désactivé",
+  inactive: {
+    label: "Inactif",
     cls: "bg-ink-700/60 text-ink-300 ring-ink-600",
     dot: "bg-ink-400",
   },
-  static: {
-    label: "Statique",
-    cls: "bg-yellow-500/10 text-yellow-300 ring-yellow-500/30",
-    dot: "bg-yellow-500",
+  failed: {
+    label: "Échec",
+    cls: "bg-red-500/10 text-red-300 ring-red-500/30",
+    dot: "bg-red-500",
+  },
+  "not-found": {
+    label: "Introuvable",
+    cls: "bg-orange-500/10 text-orange-300 ring-orange-500/30",
+    dot: "bg-orange-500",
   },
 } as const;
 
 
 type Filter =
   | "all"
-  | "enabled"
-  | "disabled"
-  | "static";
-
-
+  | "active"
+  | "inactive"
+  | "failed";
+  
 function describeState(state: string) {
   return (
     stateMeta[state as keyof typeof stateMeta] ?? {
@@ -44,6 +48,8 @@ function describeState(state: string) {
   );
 }
 
+
+
 function toFallbackServices(services: Array<{ name: string; enabled: boolean }>): ServiceItem[] {
   return services.map((service) => ({
     name: service.name,
@@ -51,17 +57,21 @@ function toFallbackServices(services: Array<{ name: string; enabled: boolean }>)
   }));
 }
 
-function summarizeServices(snapshot: ServicesSnapshot | null, fallback: ServiceItem[]) {
+function summarizeServices(
+  snapshot: ServicesSnapshot | null,
+  fallback: ServiceItem[]
+) {
   const list = snapshot?.list ?? fallback;
 
   return {
     total: snapshot?.total ?? list.length,
-    enabled: snapshot?.enabled ?? list.filter(s => s.state === "enabled").length,
-    disabled: snapshot?.disabled ?? list.filter(s => s.state === "disabled").length,
-    static: snapshot?.static ?? list.filter(s => s.state === "static").length,
+    active: snapshot?.active ?? list.filter(s => s.state === "active").length,
+    inactive: snapshot?.inactive ?? list.filter(s => s.state === "inactive").length,
+    failed: snapshot?.failed ?? list.filter(s => s.state === "failed").length,
     list,
   };
 }
+
 
 export function ServicesPage() {
   const live = useLiveData();
@@ -96,12 +106,18 @@ export function ServicesPage() {
         return;
       }
 
-      const snapshot: ServicesSnapshot = {
-        total: data.services.length,
-        enabled: data.services.filter((s: ServiceItem) => s.state === "enabled").length,
-        disabled: data.services.filter((s: ServiceItem) => s.state === "disabled").length,
-        static: data.services.filter((s: ServiceItem) => s.state === "static").length,
-        list: data.services,
+      const services = data.services.filter(
+        (s: ServiceItem) => s.name !== "*"
+      );
+
+      const snapshot = {
+        total: services.length,
+        active: services.filter((s: ServiceItem) => s.state === "active").length,
+        inactive: services.filter((s: ServiceItem) => s.state === "inactive").length,
+        failed: services.filter((s: ServiceItem) => s.state === "failed").length,
+        activating: services.filter((s: ServiceItem) => s.state === "activating").length,
+        deactivating: services.filter((s: ServiceItem) => s.state === "deactivating").length,
+        list: services,
       };
 
       setServicesSnapshot(snapshot);
@@ -123,16 +139,19 @@ export function ServicesPage() {
     return true;
   });
 
+  
+
   const counts = {
     all: serviceSummary.total,
-    enabled: serviceSummary.enabled,
-    disabled: serviceSummary.disabled,
-    static: serviceSummary.static,
+    active: serviceSummary.active,
+    inactive: serviceSummary.inactive,
+    failed: serviceSummary.failed,
   };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-2">
-        {(['all', 'enabled', 'disabled', 'static'] as Filter[]).map((f) => {
+        {(['all', 'active', 'inactive', 'failed', 'not-found'] as Filter[]).map((f) => {
           const active = filter === f;
           const meta = f === 'all' ? null : stateMeta[f];
 
@@ -162,9 +181,9 @@ export function ServicesPage() {
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <MetricCard label="Total" value={serviceSummary.total} />
-        <MetricCard label="Activés" value={serviceSummary.enabled} tone="text-brand-300" />
-        <MetricCard label="Désactivés" value={serviceSummary.disabled} tone="text-ink-300" />
-        <MetricCard label="Statiques" value={serviceSummary.static} tone="text-yellow-300" />
+        <MetricCard label="Activés" value={serviceSummary.active} tone="text-brand-300" />
+        <MetricCard label="Désactivés" value={serviceSummary.inactive} tone="text-ink-300" />
+        <MetricCard label="Échoués" value={serviceSummary.failed} tone="text-red-300" />
       </div>
 
       <div className="card overflow-hidden">
