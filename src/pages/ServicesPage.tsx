@@ -78,24 +78,34 @@ export function ServicesPage() {
     console.log("Services WS connecté");
   };
 
-  socket.onmessage = (event) => {
-    const data = JSON.parse(event.data);
+    socket.onmessage = (event) => {
+      console.log("RAW WS :", event.data);
 
-    console.log("SERVICES WS :", data);
+      let data: any;
 
-    if (data.type !== "services") return;
+      try {
+        data = JSON.parse(event.data);
+      } catch {
+        console.warn("Message WS invalide :", event.data);
+        return;
+      }
 
-  const snapshot: ServicesSnapshot = {
-    total: data.services.length,
-    enabled: data.services.filter((s: ServiceItem) => s.state === "enabled").length,
-    disabled: data.services.filter((s: ServiceItem) => s.state === "disabled").length,
-    static: data.services.filter((s: ServiceItem) => s.state === "static").length,
-    list: data.services,
-  };
+      console.log("SERVICES WS :", data);
 
-    setServicesSnapshot(snapshot);
-  };
+      if (!data.services || !Array.isArray(data.services)) {
+        return;
+      }
 
+      const snapshot: ServicesSnapshot = {
+        total: data.services.length,
+        enabled: data.services.filter((s: ServiceItem) => s.state === "enabled").length,
+        disabled: data.services.filter((s: ServiceItem) => s.state === "disabled").length,
+        static: data.services.filter((s: ServiceItem) => s.state === "static").length,
+        list: data.services,
+      };
+
+      setServicesSnapshot(snapshot);
+    };
   socket.onerror = (err) => {
     console.error("Services WS erreur", err);
   };
@@ -171,7 +181,10 @@ export function ServicesPage() {
                 const meta = describeState(service.state);
 
                 return (
-                  <tr key={service.name} className="border-b border-ink-800/60 table-row-hover">
+                  <tr
+                      key={`${service.name}-${service.state}`}
+                      className="border-b border-ink-800/60 table-row-hover"
+                    >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <span className={`dot ${meta.dot}`} />
