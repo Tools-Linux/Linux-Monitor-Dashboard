@@ -81,7 +81,7 @@ export function ServicesPage() {
     socket.onmessage = (event) => {
       console.log("RAW WS :", event.data);
 
-      let data: any;
+      let data: any; 
 
       try {
         data = JSON.parse(event.data);
@@ -177,7 +177,7 @@ export function ServicesPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((service) => {
+              {filtered.map((service, index) => {
                 const meta = describeState(service.state);
 
                 return (
