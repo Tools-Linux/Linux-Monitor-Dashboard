@@ -445,60 +445,8 @@ export function DashboardPage() {
             })}
           </div>
         </div>
-
-        <div className="card card-pad">
-          <h2 className="text-sm font-semibold text-white">État des services</h2>
-          <div className="mt-4 space-y-2">
-            {serviceSummary.list
-              .filter((service) => service.state === "enabled")
-              .slice(0, 6)
-              .map((service, index) => {
-              const m = describeServiceState(service.state);
-              return (
-                <div key={`${service.name}-${index}`} className="flex items-center justify-between rounded-lg border border-ink-700/50 bg-ink-850/40 px-3 py-2.5">
-                  <div className="flex items-center gap-3">
-                    <span className={`dot ${m.dot}`} />
-                    <div>
-                      <p className="text-sm font-medium text-ink-100">{service.name}</p>
-                      <p className="font-mono text-[11px] text-ink-400">{service.state}</p>
-                    </div>
-                  </div>
-                  <span className={`chip ring-1 ring-inset ${m.cls}`}>{m.label}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
       </div>
     </div>
-  );
-}
-
-function BlockDeviceRows({ device, depth }: { device: any; depth: number }) {
-  return (
-    <>
-      <tr className={`${depth === 0 ? 'bg-ink-850/20 text-white' : 'text-ink-400 hover:bg-ink-800/10'}`}>
-        <td className="py-2.5 px-3 flex items-center">
-          <span style={{ paddingLeft: `${depth * 16}px` }} className="opacity-60 mr-1">
-            {depth > 0 ? '└─ ' : ''}
-          </span>
-          <span className={depth === 0 ? 'font-bold text-brand-300' : 'text-ink-200'}>
-            {device.name}
-          </span>
-        </td>
-        <td className="py-2.5 px-3 text-ink-400 truncate max-w-[180px]">{device.model ?? '-'}</td>
-        <td className="py-2.5 px-3">
-          <span className={`px-1.5 py-0.5 rounded text-[10px] ${device.type === 'disk' ? 'bg-brand-500/10 text-brand-400' : 'bg-ink-700/50 text-ink-400'}`}>
-            {device.type}
-          </span>
-        </td>
-        <td className="py-2.5 px-3 font-semibold">{device.size}</td>
-        <td className="py-2.5 px-3 text-accent-400">{device.mountpoint ?? '-'}</td>
-      </tr>
-      {device.children?.map((child: any) => (
-        <BlockDeviceRows key={child.name} device={child} depth={depth + 1} />
-      ))}
-    </>
   );
 }
 
