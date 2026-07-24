@@ -404,7 +404,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4">
         <div className="card card-pad">
           <h2 className="text-sm font-semibold text-white">Occupation & Performance des disques</h2>
           <div className="mt-4 space-y-4">
