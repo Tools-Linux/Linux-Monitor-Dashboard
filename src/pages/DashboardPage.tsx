@@ -239,14 +239,14 @@ export function DashboardPage() {
         <StatTile
           label="Mémoire RAM"
           value={`${memPct.toFixed(1)}%`}
-          sub={`API /memory${memUpdatedAt ? ` · ${memUpdatedAt}` : ''}`}
+          sub={`${memUpdatedAt ? ` · ${memUpdatedAt}` : ''}`}
           icon={<Server size={18} />}
           accent="bg-accent-500"
         />
         <StatTile
           label="Stockage"
           value={fmtBytes(diskSnapshot.usedGb)}
-          sub={`${fmtBytes(diskSnapshot.freeGb)} libres · API /disk${diskUpdatedAt ? ` · ${diskUpdatedAt}` : ''}`}
+          sub={`${fmtBytes(diskSnapshot.freeGb)} libres · ${diskUpdatedAt ? ` · ${diskUpdatedAt}` : ''}`}
           used={diskSnapshot.usedGb}
           total={diskSnapshot.totalGb}
           icon={<HardDrive size={18} />}
