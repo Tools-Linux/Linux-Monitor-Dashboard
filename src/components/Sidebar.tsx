@@ -45,7 +45,7 @@ export function Sidebar({ route, navigate }: SidebarProps) {
       totalGb,
       usedGb,
       freeGb: totalGb - usedGb,
-      usage: fmtBytes(pct(usedGb, totalGb)),
+      usage: pct(usedGb, totalGb),
       disks: live.disks,
     };
   });
@@ -184,7 +184,7 @@ export function Sidebar({ route, navigate }: SidebarProps) {
                 </span>
 
                 <span className="font-mono text-ink-100">
-                  {value}%
+                  {value.toFixed(1)}%
                 </span>
               </div>
 
