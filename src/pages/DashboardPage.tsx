@@ -76,6 +76,8 @@ export function DashboardPage() {
   const [memPct, setMemPct] = useState(fallbackMemPct);
   const [memTotal, setMemTotal] = useState(live.sys.memTotalGB);
   const [memUsed, setMemUsed] = useState(live.sys.memUsedGB);
+  const [memFree, setMemFree] = useState(live.sys.memTotalGB - live.sys.memUsedGB);
+  const [memHistory, setMemHistory] = useState<number[]>([]);
   const serviceSummary = summarizeServices(servicesSnapshot, fallbackServices);
 
   const swapPct = pct(live.sys.swapUsedGB, live.sys.swapTotalGB);
@@ -100,8 +102,15 @@ export function DashboardPage() {
 
         if (memory) {
           setMemPct(memory.Usage ?? memory.usage);
-          setMemTotal(memory.Total ?? memory.totalGb);
-          setMemUsed(memory.Used ?? memory.usedGb);
+          setMemTotal((memory.Total ?? memory.totalGb) / 1024 / 1024);
+          setMemUsed((memory.Used ?? memory.usedGb) / 1024 / 1024);
+          setMemFree((memory.Available ?? memory.freeGb) / 1024 / 1024);
+          const usage = Number(memory.Usage ?? memory.usage);
+          setMemPct(usage);
+          setMemHistory((prev) => [
+            ...prev.slice(-47),
+            usage,
+          ]);
         }
 
         if(uptime){
@@ -229,7 +238,11 @@ export function DashboardPage() {
       <StatTile
         label="Mémoire RAM"
         value={`${memPct.toFixed(1)}%`}
-        sub={`${(memUsed).toFixed(1)} utilisés · ${(memTotal).toFixed(1)} totaux`}
+        sub={`${memFree.toFixed(1)} GB libres`}
+        used={memUsed}
+        total={memTotal}
+        icon={<Server size={18} />}
+        accent="bg-accent-500"
       />
         <StatTile
           label="Stockage"
@@ -286,6 +299,7 @@ export function DashboardPage() {
                 <span>RAM</span>
                 <span className="font-mono text-accent-400">{Number(memPct ?? 0).toFixed(2)}%</span>
               </div>
+              <Sparkline data={memHistory} color="#0ea5e9" height={56} max={100} />
             </div>
           </div>
         </div>
@@ -352,7 +366,7 @@ export function DashboardPage() {
       <div className="card card-pad">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-white">Charge par cœur</h2>
-          <span className="text-xs text-ink-400">{live.sys.cores} cœurs logiques</span>
+          <span className="text-xs text-ink-400">{cpuCore} cœurs logiques</span>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
           {cpuCharge.map((c) => {
@@ -382,7 +396,7 @@ export function DashboardPage() {
                 </div>
 
                 <div className="mt-2 text-[10px] text-ink-400">
-                  Charge API CPU
+                  Charge Par Cœur
                 </div>
               </div>
             );
