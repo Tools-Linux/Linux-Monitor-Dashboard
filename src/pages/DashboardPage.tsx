@@ -327,7 +327,7 @@ export function DashboardPage() {
             <Info label="Uptime" value={uptime} />
             <Info label="Processus" value={`${cpuProcessorCount} (${cpuThreads} threads)`} />
             <Info label="CPU" value={cpuName} span={3} />
-            <Info label="Core API" value={cpuCore} mono />
+            <Info label="Core" value={cpuCore} mono />
           </div>
         </div>
 

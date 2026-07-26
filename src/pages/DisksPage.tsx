@@ -101,10 +101,6 @@ useEffect(() => {
               <p className="text-sm font-semibold text-white">
                 Stockage serveur
               </p>
-
-              <p className="font-mono text-[11px] text-ink-400">
-                {WS_URL}
-              </p>
             </div>
           </div>
 
@@ -133,29 +129,6 @@ useEffect(() => {
               style={{ width: `${usagePercent}%` }}
             />
           </div>
-        </div>
-
-        <div className="mt-4 flex items-center justify-between rounded-lg border border-ink-700/50 bg-ink-850/40 px-3 py-2.5">
-          <div>
-            <p className="font-medium text-ink-100">
-              {connected
-                ? "Connecté au WebSocket"
-                : "Déconnecté"}
-            </p>
-
-            <p className="text-xs text-ink-400">
-              {WS_URL}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            className="inline-flex items-center gap-2 rounded-lg border border-ink-700/60 bg-ink-800/80 px-3 py-2 text-xs font-medium text-ink-100 hover:bg-ink-700"
-          >
-            <RefreshCw size={14} />
-            Reconnecter
-          </button>
         </div>
       </div>
     </div>
