@@ -85,8 +85,6 @@ export function DashboardPage() {
   const [diskUpdatedAt, setDiskUpdatedAt] = useState<string | null>(null);
   const [fallbackMemPct] = useState(() => pct(live.sys.memUsedGB, live.sys.memTotalGB));
   const [memPct, setMemPct] = useState(fallbackMemPct);
-  const [memHistory, setMemHistory] = useState<number[]>(() => live.memHistory.slice(-48));
-  const [memUpdatedAt, setMemUpdatedAt] = useState<string | null>(null);
   const serviceSummary = summarizeServices(servicesSnapshot, fallbackServices);
 
   const swapPct = pct(live.sys.swapUsedGB, live.sys.swapTotalGB);
@@ -239,14 +237,14 @@ export function DashboardPage() {
         <StatTile
           label="Mémoire RAM"
           value={`${memPct.toFixed(1)}%`}
-          sub={`${memUpdatedAt ? ` · ${memUpdatedAt}` : ''}`}
+          sub={`${fmtBytes(live.sys.memUsedGB)} utilisés · ${fmtBytes(live.sys.memTotalGB)} totaux`}
           icon={<Server size={18} />}
           accent="bg-accent-500"
         />
         <StatTile
           label="Stockage"
           value={fmtBytes(diskSnapshot.usedGb)}
-          sub={`${fmtBytes(diskSnapshot.freeGb)} libres · ${diskUpdatedAt ? ` · ${diskUpdatedAt}` : ''}`}
+          sub={`${fmtBytes(diskSnapshot.freeGb)} libres`}
           used={diskSnapshot.usedGb}
           total={diskSnapshot.totalGb}
           icon={<HardDrive size={18} />}
