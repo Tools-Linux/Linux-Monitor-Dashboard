@@ -209,7 +209,6 @@ export function ServicesPage() {
                         <span className={`dot ${meta.dot}`} />
                         <div>
                           <p className="font-medium text-ink-100">{service.name}</p>
-                          <p className="font-mono text-[11px] text-ink-400">api/services</p>
                         </div>
                       </div>
                     </td>
