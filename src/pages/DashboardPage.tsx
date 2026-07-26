@@ -296,8 +296,6 @@ export function DashboardPage() {
                 <span>RAM</span>
                 <span className="font-mono text-accent-400">{Number(memPct ?? 0).toFixed(2)}%</span>
               </div>
-              <Sparkline data={memHistory} color="#0ea5e9" height={56} max={100} />
-              <p className="mt-2 text-[11px] text-ink-500">Dernière API : {memUpdatedAt ?? 'en attente...'}</p>
             </div>
           </div>
         </div>
