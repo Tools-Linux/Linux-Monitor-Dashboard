@@ -2,17 +2,16 @@ import {
   Activity,
   Cpu,
   HardDrive,
-  ListTree,
   Network,
   ScrollText,
   Settings,
   Terminal,
-  ShieldCheck,
+  ListTree
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Route } from '../lib/router';
 import { useLiveData } from '../lib/live';
-import { fmtBytes ,pct, usageTone } from '../lib/format';
+import { pct, usageTone } from '../lib/format';
 interface SidebarProps {
   route: Route;
   navigate: (r: Route) => void;
@@ -20,9 +19,8 @@ interface SidebarProps {
 
 const NAV: Array<{ id: Route; label: string; icon: React.ReactNode }> = [
   { id: 'dashboard', label: 'Vue d\'ensemble', icon: <Activity size={18} /> },
-  { id: 'services', label: 'Services', icon: <ShieldCheck size={18} /> },
+  { id: 'services', label: 'Services', icon: <ListTree size={18} /> },
   { id: 'disks', label: 'Disques', icon: <HardDrive size={18} /> },
-  { id: 'processes', label: 'Processus', icon: <ListTree size={18} /> },
   { id: 'network', label: 'Réseau', icon: <Network size={18} /> },
   { id: 'logs', label: 'Journaux', icon: <ScrollText size={18} /> },
   { id: 'settings', label: 'Paramètres', icon: <Settings size={18} /> },

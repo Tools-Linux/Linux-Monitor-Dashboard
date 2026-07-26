@@ -5,7 +5,6 @@ import { useRouter, type Route } from './lib/router';
 import { DashboardPage } from './pages/DashboardPage';
 import { ServicesPage } from './pages/ServicesPage';
 import { DisksPage } from './pages/DisksPage';
-import { ProcessesPage } from './pages/ProcessesPage';
 import { NetworkPage } from './pages/NetworkPage';
 import { LogsPage } from './pages/LogsPage';
 import { SettingsPage } from './pages/SettingsPage';
@@ -44,7 +43,6 @@ function App() {
             {route === 'dashboard' && <DashboardPage />}
             {route === 'services' && <ServicesPage />}
             {route === 'disks' && <DisksPage />}
-            {route === 'processes' && <ProcessesPage />}
             {route === 'network' && <NetworkPage />}
             {route === 'logs' && <LogsPage />}
             {route === 'settings' && <SettingsPage />}
