@@ -15,12 +15,6 @@ import { fmtBytes, pct, usageTone } from '../lib/format';
 import { Ring, Sparkline } from '../components/Charts';
 import { StatTile } from '../components/StatTile';
 
-const serviceStateMeta: Record<string, { label: string; cls: string; dot: string }> = {
-  enabled: { label: 'Activé', cls: 'bg-brand-500/10 text-brand-300 ring-brand-500/30', dot: 'bg-brand-500' },
-  disabled: { label: 'Désactivé', cls: 'bg-ink-700/60 text-ink-300 ring-ink-600', dot: 'bg-ink-400' },
-  static: { label: 'Statique', cls: 'bg-accent-500/10 text-accent-300 ring-accent-500/30', dot: 'bg-accent-500' },
-};
-
 const diskHealthMeta: Record<string, { cls: string; text: string }> = {
   ok: { cls: 'bg-brand-500/10 text-brand-300 ring-brand-500/30', text: 'Sain' },
   warn: { cls: 'bg-warn-500/10 text-warn-300 ring-warn-500/30', text: 'Attention' },
@@ -29,10 +23,6 @@ const diskHealthMeta: Record<string, { cls: string; text: string }> = {
 
 const WS_URL = `${WS_BASE_URL}/dashboard`;
 const SERVICES_WS_URL = `${WS_BASE_URL}/services`;
-
-function describeServiceState(state: string) {
-  return serviceStateMeta[state] ?? { label: state, cls: 'bg-ink-700/60 text-ink-300 ring-ink-600', dot: 'bg-ink-500' };
-}
 
 function toFallbackServices(services: Array<{ name: string; enabled: boolean }>): ServiceItem[] {
   return services.map((service) => ({
@@ -82,7 +72,6 @@ export function DashboardPage() {
     };
   });
   const [diskSnapshot, setDiskSnapshot] = useState(fallbackDisk);
-  const [diskUpdatedAt, setDiskUpdatedAt] = useState<string | null>(null);
   const [fallbackMemPct] = useState(() => pct(live.sys.memUsedGB, live.sys.memTotalGB));
   const [memPct, setMemPct] = useState(fallbackMemPct);
   const serviceSummary = summarizeServices(servicesSnapshot, fallbackServices);
@@ -165,8 +154,6 @@ export function DashboardPage() {
               writeMBps: Number(d.writeMBps ?? d.WriteMBps ?? 0),
             })),
           });
-
-          setDiskUpdatedAt(new Date().toLocaleTimeString());
         }
       }
     };
