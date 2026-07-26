@@ -6,12 +6,13 @@ import {
   ScrollText,
   Settings,
   Terminal,
+
   ListTree
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { Route } from '../lib/router';
 import { useLiveData } from '../lib/live';
-import { pct, usageTone } from '../lib/format';
+import { fmtBytes, pct, usageTone } from '../lib/format';
 interface SidebarProps {
   route: Route;
   navigate: (r: Route) => void;
@@ -44,7 +45,7 @@ export function Sidebar({ route, navigate }: SidebarProps) {
       totalGb,
       usedGb,
       freeGb: totalGb - usedGb,
-      usage: pct(usedGb, totalGb),
+      usage: fmtBytes(pct(usedGb, totalGb)),
       disks: live.disks,
     };
   });
