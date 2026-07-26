@@ -74,6 +74,8 @@ export function DashboardPage() {
   const [diskSnapshot, setDiskSnapshot] = useState(fallbackDisk);
   const [fallbackMemPct] = useState(() => pct(live.sys.memUsedGB, live.sys.memTotalGB));
   const [memPct, setMemPct] = useState(fallbackMemPct);
+  const [memTotal, setMemTotal] = useState(live.sys.memTotalGB);
+  const [memUsed, setMemUsed] = useState(live.sys.memUsedGB);
   const serviceSummary = summarizeServices(servicesSnapshot, fallbackServices);
 
   const swapPct = pct(live.sys.swapUsedGB, live.sys.swapTotalGB);
@@ -98,6 +100,8 @@ export function DashboardPage() {
 
         if (memory) {
           setMemPct(memory.Usage ?? memory.usage);
+          setMemTotal(memory.Total ?? memory.totalGb);
+          setMemUsed(memory.Used ?? memory.usedGb);
         }
 
         if(uptime){
@@ -221,13 +225,12 @@ export function DashboardPage() {
           icon={<Cpu size={18} />}
           accent="bg-brand-500"
         />
-        <StatTile
-          label="Mémoire RAM"
-          value={`${memPct.toFixed(1)}%`}
-          sub={`${fmtBytes(live.sys.memUsedGB)} utilisés · ${fmtBytes(live.sys.memTotalGB)} totaux`}
-          icon={<Server size={18} />}
-          accent="bg-accent-500"
-        />
+
+      <StatTile
+        label="Mémoire RAM"
+        value={`${memPct.toFixed(1)}%`}
+        sub={`${fmtBytes(memUsed)} utilisés · ${fmtBytes(memTotal)} totaux`}
+      />
         <StatTile
           label="Stockage"
           value={fmtBytes(diskSnapshot.usedGb)}
