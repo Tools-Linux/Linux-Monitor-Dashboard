@@ -229,7 +229,7 @@ export function DashboardPage() {
       <StatTile
         label="Mémoire RAM"
         value={`${memPct.toFixed(1)}%`}
-        sub={`${fmtBytes(memUsed)} utilisés · ${fmtBytes(memTotal)} totaux`}
+        sub={`${(memUsed).toFixed(1)} utilisés · ${(memTotal).toFixed(1)} totaux`}
       />
         <StatTile
           label="Stockage"
